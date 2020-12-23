@@ -210,11 +210,18 @@ instance.prototype.GetPlaybackState = function(){
             self.ShuffleOn = false;
             self.checkFeedbacks('is-shuffle');
         }
+        var songProgress
+        var songDuration
+        var songPercentage
+        var songName
+        var albumName
+        var artistName
+        var albumArt
 
-        if (data.body.item.duration_ms) {
-            var songProgress = data.body.progress_ms;
-            var songDuration = data.body.item.duration_ms;
-            var songPercentage = songProgress/songDuration;
+        if (data.body.item) {
+            songProgress = data.body.progress_ms;
+            songDuration = data.body.item.duration_ms;
+            songPercentage = songProgress/songDuration;
 
             songPercentage = songPercentage*100;
             songPercentage = songPercentage.toFixed(0);
@@ -224,15 +231,25 @@ instance.prototype.GetPlaybackState = function(){
     
             songDuration = songDuration/1000;
             songDuration = songDuration.toFixed(0);
+
+
+            songName = data.body.item.name;
+            albumName = data.body.item.album.name;
+            artistName = data.body.item.artists[0].name;
+            albumArt = data.body.item.album.images[0].url;
         } else {
-            var songProgress = 0;
-            var songDuration = 0;
-            var songPercentage = 0;
+            songProgress   = 0;
+            songDuration   = 0;
+            songPercentage = 0;
+            songName       = "";
+            albumName      = "";
+            artistName     = "";
+            albumArt       = "";
         }
         
-        self.setVariable('songName',            data.body.item.name);
-        self.setVariable('albumName',           data.body.item.album.name)
-        self.setVariable('artistName',          data.body.item.artists[0].name)
+        self.setVariable('songName',            songName);
+        self.setVariable('albumName',           albumName)
+        self.setVariable('artistName',          artistName)
         self.setVariable('isPlaying',           self.MusicPlaying);
         self.setVariable('isShuffle',           self.ShuffleOn);
         self.setVariable('repeat',              data.body.repeat_state);
@@ -240,7 +257,7 @@ instance.prototype.GetPlaybackState = function(){
         self.setVariable('songProgressSeconds', songProgress); 
         self.setVariable('songDurationSeconds', songDuration); 
         self.setVariable('volume',              data.body.device.volume_percent);
-        self.setVariable('currentAlbumArt',     data.body.item.album.images[0].url);
+        self.setVariable('currentAlbumArt',     albumArt);
     },
     function(err) {
         self.errorCheck(err)
