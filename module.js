@@ -48,12 +48,12 @@ instance.prototype.errorCheck = function(err){
               self.spotifyApi.setAccessToken(data.body['access_token']);
             },
             function(err) {
-                self.warn('Could not refresh access token', err);
+                console.log('Could not refresh access token', err);
             }
         );
     }
     else {
-        self.warn('Something went wrong with an API Call: '+ err);
+        console.log('Something went wrong with an API Call: '+ err);
     }
 }
 
@@ -68,7 +68,7 @@ instance.prototype.ChangePlayState = function(action,device) {
                     function() {
                         self.GetPlaybackState();
                     },
-                    function(err) {self.warn('Something went wrong!', err);}
+                    function(err) {console.log('Something went wrong!', err);}
                 );
             }
         } else {
@@ -77,14 +77,13 @@ instance.prototype.ChangePlayState = function(action,device) {
                     function() {
                         self.GetPlaybackState();
                     },
-                    function(err) {self.warn('Something went wrong!', err);}
+                    function(err) {console.log('Something went wrong!', err);}
                 );
             }
         }
     }, function(err) {
-        if (errorCheck(err)) {
-            self.ChangePlayState(action);
-        }
+        errorCheck(err)
+        self.ChangePlayState(action);
     });
 }
 
@@ -110,9 +109,8 @@ instance.prototype.ChangeShuffleState = function(action) {
             }
         }
     }, function(err,) {
-        if (self.errorCheck(err)) {
-            self.ChangeShuffleState(action);
-        }
+        self.errorCheck(err);
+        self.ChangeShuffleState(action);
     });
 
 }
@@ -121,7 +119,6 @@ instance.prototype.ChangeVolume = function(action,device) {
     var self = this;
     var availableDevices;
     var currentVolume;
-
     self.spotifyApi.getMyDevices()
     .then(function(data) {
 
@@ -152,9 +149,8 @@ instance.prototype.ChangeVolume = function(action,device) {
                 self.errorCheck(err)
             });
         }, function(err) {
-            if (self.errorCheck(err)) {
-                self.ChangeVolume(action);
-            }
+            self.errorCheck(err);
+            self.ChangeVolume(action);
         });
 }
 
@@ -163,9 +159,8 @@ instance.prototype.SkipSong = function() {
     self.spotifyApi.skipToNext()
     .then(function() {},
     function(err) {
-        if (self.errorCheck(err)) {
-            self.SkipSong();
-        }
+        self.errorCheck(err);
+        self.SkipSong();
     });
 }
 
@@ -174,9 +169,8 @@ instance.prototype.PreviousSong = function(){
     self.spotifyApi.skipToPrevious()
     .then(function() {},
     function(err) {
-        if (self.errorCheck(err)) {
-            self.PreviousSong();
-        }
+        self.errorCheck(err);
+        self.PreviousSong();
     });
 }
 
@@ -217,19 +211,25 @@ instance.prototype.GetPlaybackState = function(){
             self.checkFeedbacks('is-shuffle');
         }
 
-        let songProgress = data.body.progress_ms;
-        let songDuration = data.body.item.duration_ms
-        let songPercentage = songProgress/songDuration;
+        if (data.body.item.duration_ms) {
+            var songProgress = data.body.progress_ms;
+            var songDuration = data.body.item.duration_ms;
+            var songPercentage = songProgress/songDuration;
+
+            songPercentage = songPercentage*100;
+            songPercentage = songPercentage.toFixed(0);
+    
+            songProgress = songProgress/1000;
+            songProgress = songProgress.toFixed(0);
+    
+            songDuration = songDuration/1000;
+            songDuration = songDuration.toFixed(0);
+        } else {
+            var songProgress = 0;
+            var songDuration = 0;
+            var songPercentage = 0;
+        }
         
-        songPercentage = songPercentage*100;
-        songPercentage = songPercentage.toFixed(0);
-
-        songProgress = songProgress/1000;
-        songProgress = songProgress.toFixed(0);
-
-        songDuration = songDuration/1000;
-        songDuration = songDuration.toFixed(0);
-
         self.setVariable('songName',            data.body.item.name);
         self.setVariable('albumName',           data.body.item.album.name)
         self.setVariable('artistName',          data.body.item.artists[0].name)
@@ -243,11 +243,9 @@ instance.prototype.GetPlaybackState = function(){
         self.setVariable('currentAlbumArt',     data.body.item.album.images[0].url);
     },
     function(err) {
-        if (self.errorCheck(err)) {
-            self.GetPlaybackState();
-        }
+        self.errorCheck(err)
+        self.GetPlaybackState();
     });
-    
 }
 
 instance.prototype.updateConfig = function(config) {
@@ -315,7 +313,7 @@ instance.prototype.init = function() {
             self.spotifyApi.setAccessToken(data.body['access_token']);
         },
         function(err) {
-            self.warn('Could not refresh access token', err);
+            console.log('Could not refresh access token', err);
         }
     );
 
@@ -342,7 +340,6 @@ instance.prototype.destroy = function() {
     var self = this;
     self.StopTimer();
     debug("destroy");
-    //TODO
 }
 
 instance.prototype.config_fields = function () {
@@ -581,7 +578,7 @@ instance.prototype.action = function(action) {
                 }
             }
         }, function(err) {
-            self.warn('Something went wrong!', err);
+            console.log('Something went wrong!', err);
         });
     }
 
