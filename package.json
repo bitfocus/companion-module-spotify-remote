@@ -1,5 +1,5 @@
 {
-  "name": "spotify",
+  "name": "spotify-remote",
   "version": "1.0.0",
   "description": "",
   "main": "module.js",
@@ -12,7 +12,7 @@
     "Spotify"
   ],
   "manufacturer": "Spotify",
-  "product": "Spotify Web API and Controller",
+  "product": "Web API and Controller",
   "shortname": "Spotify",
   "dependencies": {
     "spotify-web-api-node": "^5.0.0"
