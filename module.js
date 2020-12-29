@@ -216,13 +216,14 @@ instance.prototype.GetPlaybackState = function(){
             self.ShuffleOn = false;
             self.checkFeedbacks('is-shuffle');
         }
-        var songProgress
-        var songDuration
-        var songPercentage
-        var songName
-        var albumName
-        var artistName
-        var albumArt
+
+        var songProgress   = 0;
+        var songDuration   = 0;
+        var songPercentage = 0;
+        var songName       = "";
+        var albumName      = "";
+        var artistName     = "";
+        var albumArt       = "";
 
         if (data.body.item) {
             songProgress = data.body.progress_ms;
@@ -243,14 +244,11 @@ instance.prototype.GetPlaybackState = function(){
             albumName = data.body.item.album.name;
             artistName = data.body.item.artists[0].name;
             albumArt = data.body.item.album.images[0].url;
-        } else {
-            songProgress   = 0;
-            songDuration   = 0;
-            songPercentage = 0;
-            songName       = "";
-            albumName      = "";
-            artistName     = "";
-            albumArt       = "";
+        }
+
+        var deviceVolume = 0
+        if (data.body.device) {
+            deviceVolume = data.body.device.volume_percent
         }
         
         self.setVariable('songName',            songName);
@@ -262,7 +260,7 @@ instance.prototype.GetPlaybackState = function(){
         self.setVariable('songPercentage',      songPercentage); 
         self.setVariable('songProgressSeconds', songProgress); 
         self.setVariable('songDurationSeconds', songDuration); 
-        self.setVariable('volume',              data.body.device.volume_percent);
+        self.setVariable('volume',              deviceVolume);
         self.setVariable('currentAlbumArt',     albumArt);
     },
     function(err) {
