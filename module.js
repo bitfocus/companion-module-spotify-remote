@@ -119,27 +119,32 @@ instance.prototype.ChangeVolume = function(action,device) {
     var self = this;
     var availableDevices;
     var currentVolume;
+    var volumeChangable = true;
     self.spotifyApi.getMyDevices()
     .then(function(data) {
 
         availableDevices = data.body.devices;
 
-        for (i=0; i <availableDevices.length; i++) {
+        for (i=0; i < availableDevices.length; i++) {
             if (availableDevices[i].id == device) {
+                if (availableDevices[i].type == "Tablet" || availableDevices[i].type == "Phone"){
+                    volumeChangable = false;
+                }
                 currentVolume = availableDevices[i].volume_percent;
             }
         }
-
-        if (action.action == 'volumeUp') {
-            currentVolume = currentVolume - -action.options.volumeUpAmount; //double negitive because JS things
-            if (currentVolume > 100) {
-                currentVolume = 100;
+        if (volumeChangable) {
+            if (action.action == 'volumeUp') {
+                currentVolume = currentVolume - -action.options.volumeUpAmount; //double negitive because JS things
+                if (currentVolume > 100) {
+                    currentVolume = 100;
+                }
             }
-        }
-        else {
-            currentVolume = currentVolume - action.options.volumeDownAmount;
-            if (currentVolume < 0) {
-                currentVolume = 0;
+            else {
+                currentVolume = currentVolume - action.options.volumeDownAmount;
+                if (currentVolume < 0) {
+                    currentVolume = 0;
+                }
             }
         }
 
@@ -151,7 +156,8 @@ instance.prototype.ChangeVolume = function(action,device) {
         }, function(err) {
             self.errorCheck(err);
             self.ChangeVolume(action);
-        });
+        }
+    );
 }
 
 instance.prototype.SkipSong = function() {
