@@ -48,12 +48,12 @@ instance.prototype.errorCheck = function(err){
               self.spotifyApi.setAccessToken(data.body['access_token']);
             },
             function(err) {
-                self.warn('Could not refresh access token', err);
+                console.log('Could not refresh access token', err);
             }
         );
     }
     else {
-        self.warn('Something went wrong with an API Call: '+ err);
+        console.log('Something went wrong with an API Call: '+ err);
     }
 }
 
@@ -68,7 +68,7 @@ instance.prototype.ChangePlayState = function(action,device) {
                     function() {
                         self.GetPlaybackState();
                     },
-                    function(err) {self.warn('Something went wrong!', err);}
+                    function(err) {console.log('Something went wrong!', err);}
                 );
             }
         } else {
@@ -77,14 +77,13 @@ instance.prototype.ChangePlayState = function(action,device) {
                     function() {
                         self.GetPlaybackState();
                     },
-                    function(err) {self.warn('Something went wrong!', err);}
+                    function(err) {console.log('Something went wrong!', err);}
                 );
             }
         }
     }, function(err) {
-        if (errorCheck(err)) {
-            self.ChangePlayState(action);
-        }
+        errorCheck(err)
+        self.ChangePlayState(action);
     });
 }
 
@@ -110,9 +109,8 @@ instance.prototype.ChangeShuffleState = function(action) {
             }
         }
     }, function(err,) {
-        if (self.errorCheck(err)) {
-            self.ChangeShuffleState(action);
-        }
+        self.errorCheck(err);
+        self.ChangeShuffleState(action);
     });
 
 }
@@ -121,28 +119,32 @@ instance.prototype.ChangeVolume = function(action,device) {
     var self = this;
     var availableDevices;
     var currentVolume;
-
+    var volumeChangable = true;
     self.spotifyApi.getMyDevices()
     .then(function(data) {
 
         availableDevices = data.body.devices;
 
-        for (i=0; i <availableDevices.length; i++) {
+        for (i=0; i < availableDevices.length; i++) {
             if (availableDevices[i].id == device) {
+                if (availableDevices[i].type == "Tablet" || availableDevices[i].type == "Phone"){
+                    volumeChangable = false;
+                }
                 currentVolume = availableDevices[i].volume_percent;
             }
         }
-
-        if (action.action == 'volumeUp') {
-            currentVolume = currentVolume - -action.options.volumeUpAmount; //double negitive because JS things
-            if (currentVolume > 100) {
-                currentVolume = 100;
+        if (volumeChangable) {
+            if (action.action == 'volumeUp') {
+                currentVolume = currentVolume - -action.options.volumeUpAmount; //double negitive because JS things
+                if (currentVolume > 100) {
+                    currentVolume = 100;
+                }
             }
-        }
-        else {
-            currentVolume = currentVolume - action.options.volumeDownAmount;
-            if (currentVolume < 0) {
-                currentVolume = 0;
+            else {
+                currentVolume = currentVolume - action.options.volumeDownAmount;
+                if (currentVolume < 0) {
+                    currentVolume = 0;
+                }
             }
         }
 
@@ -152,10 +154,10 @@ instance.prototype.ChangeVolume = function(action,device) {
                 self.errorCheck(err)
             });
         }, function(err) {
-            if (self.errorCheck(err)) {
-                self.ChangeVolume(action);
-            }
-        });
+            self.errorCheck(err);
+            self.ChangeVolume(action);
+        }
+    );
 }
 
 instance.prototype.SkipSong = function() {
@@ -163,9 +165,8 @@ instance.prototype.SkipSong = function() {
     self.spotifyApi.skipToNext()
     .then(function() {},
     function(err) {
-        if (self.errorCheck(err)) {
-            self.SkipSong();
-        }
+        self.errorCheck(err);
+        self.SkipSong();
     });
 }
 
@@ -174,9 +175,8 @@ instance.prototype.PreviousSong = function(){
     self.spotifyApi.skipToPrevious()
     .then(function() {},
     function(err) {
-        if (self.errorCheck(err)) {
-            self.PreviousSong();
-        }
+        self.errorCheck(err);
+        self.PreviousSong();
     });
 }
 
@@ -217,37 +217,56 @@ instance.prototype.GetPlaybackState = function(){
             self.checkFeedbacks('is-shuffle');
         }
 
-        let songProgress = data.body.progress_ms;
-        let songDuration = data.body.item.duration_ms
-        let songPercentage = songProgress/songDuration;
+        var songProgress   = 0;
+        var songDuration   = 0;
+        var songPercentage = 0;
+        var songName       = "";
+        var albumName      = "";
+        var artistName     = "";
+        var albumArt       = "";
+
+        if (data.body.item) {
+            songProgress = data.body.progress_ms;
+            songDuration = data.body.item.duration_ms;
+            songPercentage = songProgress/songDuration;
+
+            songPercentage = songPercentage*100;
+            songPercentage = songPercentage.toFixed(0);
+    
+            songProgress = songProgress/1000;
+            songProgress = songProgress.toFixed(0);
+    
+            songDuration = songDuration/1000;
+            songDuration = songDuration.toFixed(0);
+
+
+            songName = data.body.item.name;
+            albumName = data.body.item.album.name;
+            artistName = data.body.item.artists[0].name;
+            albumArt = data.body.item.album.images[0].url;
+        }
+
+        var deviceVolume = 0
+        if (data.body.device) {
+            deviceVolume = data.body.device.volume_percent
+        }
         
-        songPercentage = songPercentage*100;
-        songPercentage = songPercentage.toFixed(0);
-
-        songProgress = songProgress/1000;
-        songProgress = songProgress.toFixed(0);
-
-        songDuration = songDuration/1000;
-        songDuration = songDuration.toFixed(0);
-
-        self.setVariable('songName',            data.body.item.name);
-        self.setVariable('albumName',           data.body.item.album.name)
-        self.setVariable('artistName',          data.body.item.artists[0].name)
+        self.setVariable('songName',            songName);
+        self.setVariable('albumName',           albumName)
+        self.setVariable('artistName',          artistName)
         self.setVariable('isPlaying',           self.MusicPlaying);
         self.setVariable('isShuffle',           self.ShuffleOn);
         self.setVariable('repeat',              data.body.repeat_state);
         self.setVariable('songPercentage',      songPercentage); 
         self.setVariable('songProgressSeconds', songProgress); 
         self.setVariable('songDurationSeconds', songDuration); 
-        self.setVariable('volume',              data.body.device.volume_percent);
-        self.setVariable('currentAlbumArt',     data.body.item.album.images[0].url);
+        self.setVariable('volume',              deviceVolume);
+        self.setVariable('currentAlbumArt',     albumArt);
     },
     function(err) {
-        if (self.errorCheck(err)) {
-            self.GetPlaybackState();
-        }
+        self.errorCheck(err)
+        self.GetPlaybackState();
     });
-    
 }
 
 instance.prototype.updateConfig = function(config) {
@@ -315,7 +334,7 @@ instance.prototype.init = function() {
             self.spotifyApi.setAccessToken(data.body['access_token']);
         },
         function(err) {
-            self.warn('Could not refresh access token', err);
+            console.log('Could not refresh access token', err);
         }
     );
 
@@ -342,7 +361,6 @@ instance.prototype.destroy = function() {
     var self = this;
     self.StopTimer();
     debug("destroy");
-    //TODO
 }
 
 instance.prototype.config_fields = function () {
@@ -581,7 +599,7 @@ instance.prototype.action = function(action) {
                 }
             }
         }, function(err) {
-            self.warn('Something went wrong!', err);
+            console.log('Something went wrong!', err);
         });
     }
 
