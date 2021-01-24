@@ -15,6 +15,6 @@
   "product": "Web API and Controller",
   "shortname": "Spotify",
   "dependencies": {
-    "spotify-web-api-node": "^5.0.0"
+    "spotify-web-api-node": "^5.0.1"
   }
 }
