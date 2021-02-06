@@ -6,25 +6,16 @@ var instance_skel = require('../../instance_skel');
 var SpotifyWebApi = require('spotify-web-api-node');
 
 const scopes = [
-    'ugc-image-upload',
     'user-read-playback-state',
     'user-modify-playback-state',
     'user-read-currently-playing',
     'streaming',
     'app-remote-control',
-    'user-read-email',
-    'user-read-private',
     'playlist-read-collaborative',
-    'playlist-modify-public',
     'playlist-read-private',
-    'playlist-modify-private',
-    'user-library-modify',
     'user-library-read',
     'user-top-read',
-    'user-read-playback-position',
-    'user-read-recently-played',
-    'user-follow-read',
-    'user-follow-modify'
+    'user-read-playback-position'
 ];
 
 
@@ -46,14 +37,17 @@ instance.prototype.errorCheck = function(err){
         self.spotifyApi.refreshAccessToken().then(
             function(data) {
               self.spotifyApi.setAccessToken(data.body['access_token']);
+              return true;
             },
             function(err) {
                 console.log('Could not refresh access token', err);
+                return false;
             }
         );
     }
     else {
         console.log('Something went wrong with an API Call: '+ err);
+        return false;
     }
 }
 
@@ -82,8 +76,10 @@ instance.prototype.ChangePlayState = function(action,device) {
             }
         }
     }, function(err) {
-        errorCheck(err)
-        self.ChangePlayState(action);
+        if(errorCheck(err)) {
+            self.ChangePlayState(action);
+        }
+        
     });
 }
 
@@ -97,20 +93,29 @@ instance.prototype.ChangeShuffleState = function(action) {
                     .then(function() {
                         self.GetPlaybackState();
                     },
-                    function(err) {self.errorCheck(err)});
+                    function(err) {        
+                        if(errorCheck(err)) {
+                            self.ChangeShuffleState(action);
+                        }
+                    });
             }
-        }else{
-            if (action.action == 'shuffleOn' || action.action == 'shuffleToggle') {
-                self.spotifyApi.setShuffle(true)
-                .then(function() {
-                    self.GetPlaybackState();
-                },
-                function(err) {self.errorCheck(err)});
+            }else{
+                if (action.action == 'shuffleOn' || action.action == 'shuffleToggle') {
+                    self.spotifyApi.setShuffle(true)
+                    .then(function() {
+                        self.GetPlaybackState();
+                    },
+                    function(err) {        
+                        if(errorCheck(err)) {
+                            self.ChangeShuffleState(action);
+                        }
+                    });
+                }
             }
+    }, function(err) {
+        if(self.errorCheck(err)){
+            self.ChangeShuffleState(action);
         }
-    }, function(err,) {
-        self.errorCheck(err);
-        self.ChangeShuffleState(action);
     });
 
 }
@@ -154,8 +159,10 @@ instance.prototype.ChangeVolume = function(action,device) {
                 self.errorCheck(err)
             });
         }, function(err) {
-            self.errorCheck(err);
-            self.ChangeVolume(action);
+            if(self.errorCheck(err)){
+                self.ChangeVolume(action);
+            }
+            
         }
     );
 }
@@ -165,8 +172,9 @@ instance.prototype.SkipSong = function() {
     self.spotifyApi.skipToNext()
     .then(function() {},
     function(err) {
-        self.errorCheck(err);
-        self.SkipSong();
+        if(self.errorCheck(err)){
+            self.SkipSong();
+        }
     });
 }
 
@@ -175,8 +183,9 @@ instance.prototype.PreviousSong = function(){
     self.spotifyApi.skipToPrevious()
     .then(function() {},
     function(err) {
-        self.errorCheck(err);
-        self.PreviousSong();
+        if(self.errorCheck(err)){
+            self.PreviousSong();
+        }
     });
 }
 
@@ -189,8 +198,9 @@ instance.prototype.TransferPlayback = function(id) {
             self.GetPlaybackState();
         },
         function(err) {
-            self.errorCheck(err);
-            self.TransferPlayback(id);
+            if(self.errorCheck(err)){
+                self.TransferPlayback(id);
+            }
         }
     );
 }
@@ -264,8 +274,9 @@ instance.prototype.GetPlaybackState = function(){
         self.setVariable('currentAlbumArt',     albumArt);
     },
     function(err) {
-        self.errorCheck(err)
-        self.GetPlaybackState();
+        if(self.errorCheck(err)){
+            self.GetPlaybackState();
+        }
     });
 }
 
