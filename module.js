@@ -34,7 +34,7 @@ instance.prototype.errorCheck = function(err){
     var self = this; 
     //Error Code 401 represents out of date token
     if (err.statusCode == '401') {
-        self.spotifyApi.refreshAccessToken().then(
+        return self.spotifyApi.refreshAccessToken().then(
             function(data) {
               self.spotifyApi.setAccessToken(data.body['access_token']);
               return true;
@@ -47,7 +47,7 @@ instance.prototype.errorCheck = function(err){
     }
     else {
         console.log('Something went wrong with an API Call: '+ err);
-        return false;
+        return Promise.resolve(false);
     }
 }
 
@@ -60,7 +60,7 @@ instance.prototype.ChangePlayState = function(action,device) {
             if (action.action == 'pause' || action.action == 'play/pause') {
                 self.spotifyApi.pause().then(
                     function() {
-                        self.GetPlaybackState();
+                        self.PollPlaybackState();
                     },
                     function(err) {console.log('Something went wrong!', err);}
                 );
@@ -69,17 +69,18 @@ instance.prototype.ChangePlayState = function(action,device) {
             if (action.action == 'play' || action.action == 'play/pause'){
                 self.spotifyApi.play({"device_id": device}).then(
                     function() {
-                        self.GetPlaybackState();
+                        self.PollPlaybackState();
                     },
                     function(err) {console.log('Something went wrong!', err);}
                 );
             }
         }
     }, function(err) {
-        if(errorCheck(err)) {
-            self.ChangePlayState(action);
-        }
-        
+        self.errorCheck(err).then(function(retry) {
+            if (retry) {
+                self.ChangePlayState(action);
+            }
+        })
     });
 }
 
@@ -91,31 +92,37 @@ instance.prototype.ChangeShuffleState = function(action) {
             if (action.action == 'shuffleOff' || action.action == 'shuffleToggle') {
                 self.spotifyApi.setShuffle(false)
                     .then(function() {
-                        self.GetPlaybackState();
+                        self.PollPlaybackState();
                     },
-                    function(err) {        
-                        if(errorCheck(err)) {
-                            self.ChangeShuffleState(action);
-                        }
+                    function(err) {
+                        self.errorCheck(err).then(function(retry) {
+                            if (retry) {
+                                self.ChangeShuffleState(action);
+                            }
+                        })
                     });
             }
-            }else{
-                if (action.action == 'shuffleOn' || action.action == 'shuffleToggle') {
-                    self.spotifyApi.setShuffle(true)
-                    .then(function() {
-                        self.GetPlaybackState();
-                    },
-                    function(err) {        
-                        if(errorCheck(err)) {
+        }else{
+            if (action.action == 'shuffleOn' || action.action == 'shuffleToggle') {
+                self.spotifyApi.setShuffle(true)
+                .then(function() {
+                    self.PollPlaybackState();
+                },
+                function(err) {    
+                    self.errorCheck(err).then(function(retry) {
+                        if (retry) {
                             self.ChangeShuffleState(action);
                         }
-                    });
-                }
+                    })
+                });
             }
-    }, function(err) {
-        if(self.errorCheck(err)){
-            self.ChangeShuffleState(action);
         }
+    }, function(err) {
+        self.errorCheck(err).then(function(retry) {
+            if (retry) {
+                self.ChangeShuffleState(action);
+            }
+        })
     });
 
 }
@@ -159,10 +166,11 @@ instance.prototype.ChangeVolume = function(action,device) {
                 self.errorCheck(err)
             });
         }, function(err) {
-            if(self.errorCheck(err)){
-                self.ChangeVolume(action);
-            }
-            
+            self.errorCheck(err).then(function(retry) {
+                if (retry) {
+                    self.ChangeVolume(action);
+                }
+            })
         }
     );
 }
@@ -172,9 +180,11 @@ instance.prototype.SkipSong = function() {
     self.spotifyApi.skipToNext()
     .then(function() {},
     function(err) {
-        if(self.errorCheck(err)){
-            self.SkipSong();
-        }
+        self.errorCheck(err).then(function(retry) {
+            if (retry) {
+                self.SkipSong();
+            }
+        })
     });
 }
 
@@ -183,9 +193,11 @@ instance.prototype.PreviousSong = function(){
     self.spotifyApi.skipToPrevious()
     .then(function() {},
     function(err) {
-        if(self.errorCheck(err)){
-            self.PreviousSong();
-        }
+        self.errorCheck(err).then(function(retry) {
+            if (retry) {
+                self.PreviousSong();
+            }
+        })
     });
 }
 
@@ -195,17 +207,19 @@ instance.prototype.TransferPlayback = function(id) {
     self.spotifyApi.transferMyPlayback(id,{play: true})
     .then(
         function() {
-            self.GetPlaybackState();
+            self.PollPlaybackState();
         },
         function(err) {
-            if(self.errorCheck(err)){
-                self.TransferPlayback(id);
-            }
+            self.errorCheck(err).then(function(retry) {
+                if (retry) {
+                    self.TransferPlayback(id);
+                }
+            })
         }
     );
 }
 
-instance.prototype.GetPlaybackState = function(){
+instance.prototype.PollPlaybackState = function(){
     var self = this;
     self.spotifyApi.getMyCurrentPlaybackState()
     .then(function(data) {
@@ -274,9 +288,11 @@ instance.prototype.GetPlaybackState = function(){
         self.setVariable('currentAlbumArt',     albumArt);
     },
     function(err) {
-        if(self.errorCheck(err)){
-            self.GetPlaybackState();
-        }
+        self.errorCheck(err).then(function(retry) {
+            if (retry) {
+                self.PollPlaybackState();
+            }
+        })
     });
 }
 
@@ -299,7 +315,7 @@ instance.prototype.updateConfig = function(config) {
                 self.spotifyApi.setRefreshToken(data.body['refresh_token']);
             }, 
         function(err) {
-            errorCheck(err);
+            self.errorCheck(err);
         });
     }
     if (self.config.redirectUri && self.config.clientSecret && self.config.clientId && !self.config.accessToken && !self.config.code) {
@@ -319,7 +335,7 @@ instance.prototype.updateConfig = function(config) {
 instance.prototype.init = function() {
 	var self = this;
     
-    self.status(self.STATE_OK);
+    self.status(self.STATUS_WARNING, 'Configuring');
 
     let spotifyApi = new SpotifyWebApi();
     self.spotifyApi = spotifyApi;
@@ -350,13 +366,26 @@ instance.prototype.init = function() {
     );
 
     if (self.Timer === undefined) {
-        self.Timer = setInterval(self.GetPlaybackState.bind(self), 250); //Check every 0.25 seconds	
+        self.Timer = setInterval(self.DoPoll.bind(self), 250); //Check every 0.25 seconds	
     }
 
     self.initFeedbacks();
     self.initVariables();
 	debug = self.debug;
 	log = self.log;
+}
+
+instance.prototype.DoPoll = function () {
+    var self = this;
+
+    // If everything is populated we can do the poll
+    if (self.spotifyApi.getClientId() && self.spotifyApi.getAccessToken() && self.spotifyApi.getClientSecret() && self.spotifyApi.getRefreshToken()){
+        self.status(self.STATUS_OK);
+
+        self.PollPlaybackState();
+    } else {
+        self.status(self.STATUS_ERROR, 'Missing required config fields');
+    }
 }
 
 instance.prototype.StopTimer = function () {
