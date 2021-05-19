@@ -107,14 +107,25 @@ instance.prototype.PlaySpecific = function (action, device) {
 		params.uris = tracks;
 	}
 
-	console.log(action, params);
 
-	self.spotifyApi.play(params).then( function(res) {
-		console.log('done');
-		self.PollPlaybackState();
-	}, function(err) {
-		console.log('Something went wrong!', err);
-	})
+	self.spotifyApi.getMyCurrentPlaybackState()
+		.then(function(data) {
+			if (data.body && data.body.context && data.body.context.uri === params.context_uri && !action.options.force) return this.log('warning', `Already playing that ${action.options.type}: ${action.options.context_uri}`)
+
+			self.spotifyApi.play(params).then( function(res) {
+				console.log('done');
+				self.PollPlaybackState();
+			}, function(err) {
+				console.log('Something went wrong!', err);
+			})
+
+		}, function (err) {
+			self.errorCheck(err).then(function (retry) {
+				if (retry) {
+					self.ChangeShuffleState(action);
+				}
+			})
+		});	
 }
 
 instance.prototype.ChangeShuffleState = function (action) {
@@ -528,6 +539,12 @@ instance.prototype.actions = function (system) {
 				type: 'textinput',
 				label: 'Item ID',
 				id: 'context_uri',
+			}, {
+				type: 'checkbox',
+				default: false,
+				label: 'Force Play',
+				id: 'force',
+				tooltip: 'Play even if this is already playing'
 			}]
 		},
 		'playSpecificTracks': {
