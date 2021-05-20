@@ -110,7 +110,27 @@ instance.prototype.PlaySpecific = function (action, device) {
 
 	self.spotifyApi.getMyCurrentPlaybackState()
 		.then(function(data) {
-			if (data.body && data.body.context && data.body.context.uri === params.context_uri && !action.options.force) return this.log('warning', `Already playing that ${action.options.type}: ${action.options.context_uri}`)
+
+			console.log(data.body);
+
+			if (data.body && data.body.context && data.body.context.uri === params.context_uri) {
+				if (!action.options.behavior || action.options.behavior == 'return' || (action.options.behavior == 'resume' && data.body.is_playing)) {
+					return this.log('warning', `Already playing that ${action.options.type}: ${action.options.context_uri}`)
+				}
+
+				if (action.options.behavior == 'resume') {
+
+					return self.spotifyApi.play({
+						"device_id": device
+					}).then( function(res) {
+						console.log('done');
+						self.PollPlaybackState();
+					}, function(err) {
+						console.log('Something went wrong!', err);
+					})
+
+				}
+			}
 
 			self.spotifyApi.play(params).then( function(res) {
 				console.log('done');
@@ -539,12 +559,17 @@ instance.prototype.actions = function (system) {
 				type: 'textinput',
 				label: 'Item ID',
 				id: 'context_uri',
-			}, {
-				type: 'checkbox',
-				default: false,
-				label: 'Force Play',
-				id: 'force',
-				tooltip: 'Play even if this is already playing'
+			}, 
+			{
+				type: 'dropdown',
+				default: 'return',
+				label: 'Action Behavior if Provided Item is Currently Playing',
+				id: 'behavior',
+				choices: [
+					{ id: 'return', label: 'Do Nothing' },
+					{ id: 'resume', label: 'Play (if paused)' },
+					{ id: 'force', label: 'Force Play (from start)' },
+				  ],
 			}]
 		},
 		'playSpecificTracks': {
