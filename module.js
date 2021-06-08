@@ -89,6 +89,65 @@ instance.prototype.ChangePlayState = function (action, device) {
 		});
 }
 
+instance.prototype.PlaySpecific = function (action, device) {
+	var self = this;
+
+	let params = {
+		"device_id": device,
+	}
+
+	if (action.action == 'playSpecificList') {
+		params.context_uri = `spotify:${action.options.type}:${action.options.context_uri}`
+	}
+
+	if (action.action == 'playSpecificTracks') {
+
+		let tracks = action.options.tracks.split(',');
+		tracks = tracks.map(track => 'spotify:track:' + track.trim());
+		params.uris = tracks;
+	}
+
+
+	self.spotifyApi.getMyCurrentPlaybackState()
+		.then(function(data) {
+
+			console.log(data.body);
+
+			if (data.body && data.body.context && data.body.context.uri === params.context_uri) {
+				if (!action.options.behavior || action.options.behavior == 'return' || (action.options.behavior == 'resume' && data.body.is_playing)) {
+					return this.log('warning', `Already playing that ${action.options.type}: ${action.options.context_uri}`)
+				}
+
+				if (action.options.behavior == 'resume') {
+
+					return self.spotifyApi.play({
+						"device_id": device
+					}).then( function(res) {
+						console.log('done');
+						self.PollPlaybackState();
+					}, function(err) {
+						console.log('Something went wrong!', err);
+					})
+
+				}
+			}
+
+			self.spotifyApi.play(params).then( function(res) {
+				console.log('done');
+				self.PollPlaybackState();
+			}, function(err) {
+				console.log('Something went wrong!', err);
+			})
+
+		}, function (err) {
+			self.errorCheck(err).then(function (retry) {
+				if (retry) {
+					self.ChangeShuffleState(action);
+				}
+			})
+		});	
+}
+
 instance.prototype.ChangeShuffleState = function (action) {
 	var self = this;
 	self.spotifyApi.getMyCurrentPlaybackState()
@@ -230,6 +289,7 @@ instance.prototype.PollPlaybackState = function () {
 	var self = this;
 	self.spotifyApi.getMyCurrentPlaybackState()
 		.then(function (data) {
+			// console.log(data.body);
 				if (data.body && data.body.is_playing) {
 					self.MusicPlaying = true;
 					self.checkFeedbacks('is-playing');
@@ -482,6 +542,46 @@ instance.prototype.actions = function (system) {
 		'play': {
 			label: 'Play',
 		},
+		'playSpecificList': {
+			label: 'Start Specific Playlist',
+			options: [{
+				id: 'type',
+				type: 'dropdown',
+				required: true,
+				choices: [
+					{ id: 'album', label: 'Album' },
+					{ id: 'artist', label: 'Artist' },
+					{ id: 'playlist', label: 'Playlist' },
+				  ],
+			}, {
+				tooltip:'Provide the ID for the item',
+				required: true,
+				type: 'textinput',
+				label: 'Item ID',
+				id: 'context_uri',
+			}, 
+			{
+				type: 'dropdown',
+				default: 'return',
+				label: 'Action Behavior if Provided Item is Currently Playing',
+				id: 'behavior',
+				choices: [
+					{ id: 'return', label: 'Do Nothing' },
+					{ id: 'resume', label: 'Play (if paused)' },
+					{ id: 'force', label: 'Force Play (from start)' },
+				  ],
+			}]
+		},
+		'playSpecificTracks': {
+			label: 'Start Specific Track(s)',
+			tooltip: 'IDs should be comma separated (ie. 4ByEFOBuLXpCqvO1kw8Wdm,7BaEFOBuLXpDqvO1kw8Wem)',
+			options: [{
+				id: 'tracks',
+				type: 'textinput',
+				required: true,
+				label: 'Input Specific Track IDs',
+			}]
+		},
 		'pause': {
 			label: 'Pause Playback',
 		},
@@ -641,6 +741,10 @@ instance.prototype.action = function (action) {
 
 	if (action.action == "play/pause" || action.action == 'play' || action.action == 'pause') {
 		self.ChangePlayState(action, self.config.deviceId);
+	}
+
+	if (action.action == "playSpecificList" || action.action == "playSpecificTracks") {
+		self.PlaySpecific(action, self.config.deviceId);
 	}
 
 	if (action.action == 'shuffleToggle' || action.action == 'shuffleOn' || action.action == 'shuffleOff') {
