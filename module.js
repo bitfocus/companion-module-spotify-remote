@@ -4,6 +4,7 @@
 
 var instance_skel = require('../../instance_skel');
 var SpotifyWebApi = require('spotify-web-api-node');
+const { StepFunctions } = require('aws-sdk');
 
 const scopes = [
 	'user-read-playback-state',
@@ -111,8 +112,6 @@ instance.prototype.PlaySpecific = function (action, device) {
 	self.spotifyApi.getMyCurrentPlaybackState()
 		.then(function(data) {
 
-			console.log(data.body);
-
 			if (data.body && data.body.context && data.body.context.uri === params.context_uri) {
 				if (!action.options.behavior || action.options.behavior == 'return' || (action.options.behavior == 'resume' && data.body.is_playing)) {
 					return this.log('warning', `Already playing that ${action.options.type}: ${action.options.context_uri}`)
@@ -142,7 +141,7 @@ instance.prototype.PlaySpecific = function (action, device) {
 		}, function (err) {
 			self.errorCheck(err).then(function (retry) {
 				if (retry) {
-					self.ChangeShuffleState(action);
+					self.PlaySpecific(action);
 				}
 			})
 		});	
@@ -191,7 +190,40 @@ instance.prototype.ChangeShuffleState = function (action) {
 
 }
 
-instance.prototype.ChangeVolume = function (action, device) {
+
+instance.prototype.ChangeRepeatState = function (action) {
+	var self = this;
+	self.spotifyApi.getMyCurrentPlaybackState()
+		.then(function (data) {
+
+			var currentState = data.body.repeat_state;
+
+			if (action.options.state == currentState)  {
+				console.log('Selected repeat state is already current')
+				return;
+			}
+
+			self.spotifyApi.setRepeat(action.options.state)
+				.then(function() {
+					self.PollPlaybackState();
+				},
+				function(err) {
+					self.errorCheck(err).then(function (retry) {
+						if (retry) {
+							self.ChangeRepeatState(action);
+						}
+					})
+				})
+			}, function(err) {
+				self.errorCheck(err).then(function (retry) {
+					if (retry) {
+						self.ChangeRepeatState(action);
+					}
+				})
+			})
+}
+
+instance.prototype.ChangeVolume = function (action, device, specific = false) {
 	var self = this;
 	var availableDevices;
 	var currentVolume;
@@ -209,7 +241,7 @@ instance.prototype.ChangeVolume = function (action, device) {
 					currentVolume = availableDevices[i].volume_percent;
 				}
 			}
-			if (volumeChangable) {
+			if (volumeChangable && !specific) {
 				if (action.action == 'volumeUp') {
 					currentVolume = currentVolume - -action.options.volumeUpAmount; //double negitive because JS things
 					if (currentVolume > 100) {
@@ -221,6 +253,10 @@ instance.prototype.ChangeVolume = function (action, device) {
 						currentVolume = 0;
 					}
 				}
+			}
+
+			if (specific) {
+				currentVolume = action.options.value;
 			}
 
 			self.spotifyApi.setVolume(currentVolume, {
@@ -308,6 +344,9 @@ instance.prototype.PollPlaybackState = function () {
 					self.checkFeedbacks('is-shuffle');
 				}
 
+				self.RepeatState = data.body.repeat_state;
+				self.checkFeedbacks('is-repeat');
+
 				var songProgress = 0;
 				var songDuration = 0;
 				var songPercentage = 0;
@@ -347,7 +386,7 @@ instance.prototype.PollPlaybackState = function () {
 				self.setVariable('artistName', artistName)
 				self.setVariable('isPlaying', self.MusicPlaying);
 				self.setVariable('isShuffle', self.ShuffleOn);
-				self.setVariable('repeat', data.body.repeat_state);
+				self.setVariable('repeat', self.RepeatState);
 				self.setVariable('songPercentage', songPercentage);
 				self.setVariable('songProgressSeconds', songProgress);
 				self.setVariable('songDurationSeconds', songDuration);
@@ -603,6 +642,15 @@ instance.prototype.actions = function (system) {
 				default: '5'
 			}]
 		},
+		'volumeSpecific': {
+			label: 'Set Volume to Specific Value',
+			options: [{
+				type: 'textinput',
+				label: "Volume",
+				id: 'value',
+				default: '50'
+			}]
+		},
 		'skip': {
 			label: 'Skip Track'
 		},
@@ -617,6 +665,25 @@ instance.prototype.actions = function (system) {
 		},
 		'shuffleOff': {
 			label: "Turn Shuffle Off"
+		},
+		'repeatState': {
+			label: "Set Repeat State",
+			options: [{
+				type: 'dropdown',
+				label: "State",
+				id: 'state',
+				default: 'off',
+				choices: [{
+					id: 'off',
+					label: 'off'
+				}, {
+					id: 'context',
+					label: 'context'
+				}, {
+					id: 'track',
+					label: 'track'
+				}]
+			}]
 		},
 		'activeDeviceToConfig': {
 			label: "Write the ID of the current Active Device to config"
@@ -676,6 +743,40 @@ instance.prototype.initFeedbacks = function () {
 				id: 'bg',
 				default: self.rgb(0, 255, 0)
 			},
+		]
+	};
+
+	feedbacks['is-repeat'] = {
+		label: 'Change button color based on repeat state',
+		description: 'If repeat state matches given state change button colors',
+		options: [{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255)
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(0, 255, 0)
+			},
+			{
+				type: 'dropdown',
+				label: 'Repeat state to match',
+				id: 'type',
+				default: 'track',
+				choices: [{
+					label: 'off',
+					id: 'off'
+				}, {
+					label: 'context',
+					id: 'context'
+				}, {
+					label: 'track',
+					id: 'track'
+				}] 
+			}
 		]
 	};
 
@@ -751,8 +852,16 @@ instance.prototype.action = function (action) {
 		self.ChangeShuffleState(action);
 	}
 
+	if (action.action == 'repeatState') {
+		self.ChangeRepeatState(action);
+	}
+
 	if (action.action == 'volumeUp' || action.action == 'volumeDown') {
 		self.ChangeVolume(action, self.config.deviceId);
+	}
+
+	if (action.action == "volumeSpecific") {
+		self.ChangeVolume(action, self.config.deviceId, true)
 	}
 
 	if (action.action == 'skip') {
@@ -799,6 +908,14 @@ instance.prototype.feedback = function (feedback, bank) {
 	}
 	if (feedback.type === 'is-shuffle') {
 		if (self.ShuffleOn) {
+			return {
+				color: feedback.options.fg,
+				bgcolor: feedback.options.bg
+			};
+		}
+	}
+	if (feedback.type === 'is-repeat') {		
+		if (self.RepeatState == feedback.options.type) {
 			return {
 				color: feedback.options.fg,
 				bgcolor: feedback.options.bg
