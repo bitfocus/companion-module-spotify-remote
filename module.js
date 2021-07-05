@@ -347,7 +347,7 @@ instance.prototype.PollPlaybackState = function () {
 	var self = this
 	self.spotifyApi.getMyCurrentPlaybackState().then(
 		function (data) {
-			// console.log(data.body);
+			// console.log(data.body)
 			if (data.body && data.body.is_playing) {
 				self.MusicPlaying = true
 				self.checkFeedbacks('is-playing')
@@ -398,8 +398,10 @@ instance.prototype.PollPlaybackState = function () {
 			}
 
 			var deviceVolume = 0
+			var deviceName = ''
 			if (data.body.device) {
 				deviceVolume = data.body.device.volume_percent
+				deviceName = data.body.device.name
 			}
 
 			self.setVariable('songName', songName)
@@ -413,6 +415,7 @@ instance.prototype.PollPlaybackState = function () {
 			self.setVariable('songDurationSeconds', songDuration)
 			self.setVariable('volume', deviceVolume)
 			self.setVariable('currentAlbumArt', albumArt)
+			self.setVariable('deviceName', deviceName)
 		},
 		function (err) {
 			self.errorCheck(err).then(function (retry) {
@@ -889,6 +892,10 @@ instance.prototype.initVariables = function () {
 	variables.push({
 		name: 'currentAlbumArt',
 		label: 'Currently playing album artwork',
+	})
+	variables.push({
+		name: 'deviceName',
+		label: 'Current device name',
 	})
 
 	self.setVariableDefinitions(variables)
