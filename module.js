@@ -348,26 +348,28 @@ instance.prototype.PollPlaybackState = function () {
 	self.spotifyApi.getMyCurrentPlaybackState().then(
 		function (data) {
 			// console.log(data.body)
-			if (data.body && data.body.is_playing) {
-				self.MusicPlaying = true
-				self.checkFeedbacks('is-playing')
-			}
-			if (data.body && !data.body.is_playing) {
-				self.MusicPlaying = false
-				self.checkFeedbacks('is-playing')
-			}
+			if (data.body) {
+				if (data.body.is_playing) {
+					self.MusicPlaying = true
+					self.checkFeedbacks('is-playing')
+				}
+				if (!data.body.is_playing) {
+					self.MusicPlaying = false
+					self.checkFeedbacks('is-playing')
+				}
 
-			if (data.body && data.body.shuffle_state) {
-				self.ShuffleOn = true
-				self.checkFeedbacks('is-shuffle')
-			}
-			if (data.body && !data.body.shuffle_state) {
-				self.ShuffleOn = false
-				self.checkFeedbacks('is-shuffle')
-			}
+				if (data.body.shuffle_state) {
+					self.ShuffleOn = true
+					self.checkFeedbacks('is-shuffle')
+				}
+				if (!data.body.shuffle_state) {
+					self.ShuffleOn = false
+					self.checkFeedbacks('is-shuffle')
+				}
 
-			self.RepeatState = data.body.repeat_state
-			self.checkFeedbacks('is-repeat')
+				self.RepeatState = data.body.repeat_state
+				self.checkFeedbacks('is-repeat')
+			}
 
 			var songProgress = 0
 			var songDuration = 0
@@ -398,10 +400,10 @@ instance.prototype.PollPlaybackState = function () {
 			}
 
 			var deviceVolume = 0
-			var deviceName = ''
 			if (data.body.device) {
 				deviceVolume = data.body.device.volume_percent
-				deviceName = data.body.device.name
+				self.ActiveDevice = data.body.device.name
+				self.checkFeedbacks('active-device')
 			}
 
 			self.setVariable('songName', songName)
@@ -415,7 +417,7 @@ instance.prototype.PollPlaybackState = function () {
 			self.setVariable('songDurationSeconds', songDuration)
 			self.setVariable('volume', deviceVolume)
 			self.setVariable('currentAlbumArt', albumArt)
-			self.setVariable('deviceName', deviceName)
+			self.setVariable('deviceName', self.ActiveDevice)
 		},
 		function (err) {
 			self.errorCheck(err).then(function (retry) {
@@ -841,6 +843,30 @@ instance.prototype.initFeedbacks = function () {
 		],
 	}
 
+	feedbacks['active-device'] = {
+		label: 'Change button colour if active device name matches value',
+		description: 'If active device name matches value, change button color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255),
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(0, 255, 0),
+			},
+			{
+				type: 'textinput',
+				label: 'Device Name (case insensitive)',
+				id: 'device',
+			},
+		],
+	}
+
 	self.setFeedbackDefinitions(feedbacks)
 }
 
@@ -981,6 +1007,15 @@ instance.prototype.feedback = function (feedback, bank) {
 	}
 	if (feedback.type === 'is-repeat') {
 		if (self.RepeatState == feedback.options.type) {
+			return {
+				color: feedback.options.fg,
+				bgcolor: feedback.options.bg,
+			}
+		}
+	}
+	if (feedback.type === 'active-device') {
+		console.log(self.ActiveDevice, feedback.options.device)
+		if (self.ActiveDevice.toLowerCase() == feedback.options.device.toLowerCase()) {
 			return {
 				color: feedback.options.fg,
 				bgcolor: feedback.options.bg,
