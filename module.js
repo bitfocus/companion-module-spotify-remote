@@ -1014,7 +1014,6 @@ instance.prototype.feedback = function (feedback, bank) {
 		}
 	}
 	if (feedback.type === 'active-device') {
-		console.log(self.ActiveDevice, feedback.options.device)
 		if (self.ActiveDevice.toLowerCase() == feedback.options.device.toLowerCase()) {
 			return {
 				color: feedback.options.fg,
