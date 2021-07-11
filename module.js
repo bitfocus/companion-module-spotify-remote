@@ -4,7 +4,6 @@
 
 var instance_skel = require('../../instance_skel')
 var SpotifyWebApi = require('spotify-web-api-node')
-const { StepFunctions } = require('aws-sdk')
 
 const scopes = [
 	'user-read-playback-state',
@@ -1014,7 +1013,6 @@ instance.prototype.feedback = function (feedback, bank) {
 		}
 	}
 	if (feedback.type === 'active-device') {
-		console.log(self.ActiveDevice, feedback.options.device)
 		if (self.ActiveDevice.toLowerCase() == feedback.options.device.toLowerCase()) {
 			return {
 				color: feedback.options.fg,
