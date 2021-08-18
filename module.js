@@ -237,6 +237,24 @@ instance.prototype.ChangeRepeatState = function (action) {
 	)
 }
 
+instance.prototype.SeekPosition = function (action) {
+	var self = this
+	var ms = action.options.position
+
+	self.spotifyApi.seek(ms).then(
+		function () {
+			self.PollPlaybackState()
+		},
+		function (err) {
+			self.errorCheck(err).then(function (retry) {
+				if (retry) {
+					self.SeekPosition(action)
+				}
+			})
+		}
+	)
+}
+
 instance.prototype.ChangeVolume = function (action, device, specific = false) {
 	var self = this
 	var availableDevices
@@ -350,10 +368,12 @@ instance.prototype.PollPlaybackState = function () {
 			if (data.body) {
 				if (data.body.is_playing) {
 					self.MusicPlaying = true
+					self.MusicPlayingIcon = '\u23F5'
 					self.checkFeedbacks('is-playing')
 				}
 				if (!data.body.is_playing) {
 					self.MusicPlaying = false
+					self.MusicPlayingIcon = '\u23F9'
 					self.checkFeedbacks('is-playing')
 				}
 
@@ -373,6 +393,7 @@ instance.prototype.PollPlaybackState = function () {
 			var songProgress = 0
 			var songDuration = 0
 			var songPercentage = 0
+			var timeRemaining = 0
 			var songName = ''
 			var albumName = ''
 			var artistName = ''
@@ -392,6 +413,9 @@ instance.prototype.PollPlaybackState = function () {
 				songDuration = songDuration / 1000
 				songDuration = songDuration.toFixed(0)
 
+				timeRemaining = songDuration - songProgress
+				timeRemaining = new Date(timeRemaining * 1000).toISOString().substr(11, 8)
+
 				songName = data.body.item.name
 				albumName = data.body.item.album.name
 				artistName = data.body.item.artists[0].name
@@ -409,11 +433,13 @@ instance.prototype.PollPlaybackState = function () {
 			self.setVariable('albumName', albumName)
 			self.setVariable('artistName', artistName)
 			self.setVariable('isPlaying', self.MusicPlaying)
+			self.setVariable('isPlayingIcon', self.MusicPlayingIcon)
 			self.setVariable('isShuffle', self.ShuffleOn)
 			self.setVariable('repeat', self.RepeatState)
 			self.setVariable('songPercentage', songPercentage)
 			self.setVariable('songProgressSeconds', songProgress)
 			self.setVariable('songDurationSeconds', songDuration)
+			self.setVariable('songTimeRemaining', timeRemaining)
 			self.setVariable('volume', deviceVolume)
 			self.setVariable('currentAlbumArt', albumArt)
 			self.setVariable('deviceName', self.ActiveDevice)
@@ -699,6 +725,17 @@ instance.prototype.actions = function (system) {
 				},
 			],
 		},
+		seekPosition: {
+			label: 'Seek To Position In Currently Playing Track',
+			options: [
+				{
+					type: 'textinput',
+					label: 'Position (milliseconds)',
+					id: 'position',
+					default: '',
+				},
+			],
+		},
 		skip: {
 			label: 'Skip Track',
 		},
@@ -891,13 +928,17 @@ instance.prototype.initVariables = function () {
 		label: 'Is Playback Active',
 	})
 	variables.push({
+		name: 'isPlayingIcon',
+		label: 'Playback Icon',
+	})
+	variables.push({
 		name: 'isShuffle',
 		label: 'Is Shuffle Enabled',
 	})
 	variables.push({
 		name: 'repeat',
 		label: 'Is Repeat Enabled',
-	}) // SOmething to do with repeating here
+	})
 	variables.push({
 		name: 'songPercentage',
 		label: 'Percentage of the current song completed',
@@ -909,6 +950,10 @@ instance.prototype.initVariables = function () {
 	variables.push({
 		name: 'songDurationSeconds',
 		label: 'Duration of the current song in seconds',
+	})
+	variables.push({
+		name: 'songTimeRemaining',
+		label: 'Time remaining in song (pretty formatted HH:MM:SS)',
 	})
 	variables.push({
 		name: 'volume',
@@ -951,6 +996,10 @@ instance.prototype.action = function (action) {
 
 	if (action.action == 'volumeSpecific') {
 		self.ChangeVolume(action, self.config.deviceId, true)
+	}
+
+	if (action.action == 'seekPosition') {
+		self.SeekPosition(action, self.config.position)
 	}
 
 	if (action.action == 'skip') {
