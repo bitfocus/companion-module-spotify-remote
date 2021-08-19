@@ -420,6 +420,8 @@ instance.prototype.PollPlaybackState = function () {
 				albumName = data.body.item.album.name
 				artistName = data.body.item.artists[0].name
 				albumArt = data.body.item.album.images[0].url
+			} else {
+				timeRemaining = new Date(0).toISOString().substr(11, 8)
 			}
 
 			var deviceVolume = 0
