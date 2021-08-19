@@ -415,7 +415,7 @@ instance.prototype.PollPlaybackState = function () {
 				songDuration = songDuration.toFixed(0)
 
 				timeRemaining = songDuration - songProgress
-				timeRemaining = new Date(timeRemaining * 1000).toISOString().substr(11, 8)				
+				timeRemaining = new Date(timeRemaining * 1000).toISOString().substr(11, 8)
 
 				songName = data.body.item.name
 				albumName = data.body.item.album.name
@@ -425,10 +425,10 @@ instance.prototype.PollPlaybackState = function () {
 				timeRemaining = new Date(0).toISOString().substr(11, 8)
 			}
 
-			var timeRemainingSplit = timeRemaining.split(':');
-			var hoursRemaining = timeRemainingSplit[0];
-			var minutesRemaining = timeRemainingSplit[1];
-			var secondsRemaining = timeRemainingSplit[2];
+			var timeRemainingSplit = timeRemaining.split(':')
+			var hoursRemaining = timeRemainingSplit[0]
+			var minutesRemaining = timeRemainingSplit[1]
+			var secondsRemaining = timeRemainingSplit[2]
 
 			var deviceVolume = 0
 			if (data.body.device) {
