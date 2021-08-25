@@ -1,6 +1,7 @@
 //TODO:
 // Clean up code, volume function, shuffle function, play function all in a different file. Startup and config function for setting all of the wrapper vars too
 // Seek on transfer to fix skipping due to spotifty api being bad.
+// Separate polling of data from variable state update to allow smoother status updates
 
 var instance_skel = require('../../instance_skel')
 var SpotifyWebApi = require('spotify-web-api-node')
@@ -420,7 +421,14 @@ instance.prototype.PollPlaybackState = function () {
 				albumName = data.body.item.album.name
 				artistName = data.body.item.artists[0].name
 				albumArt = data.body.item.album.images[0].url
+			} else {
+				timeRemaining = new Date(0).toISOString().substr(11, 8)
 			}
+
+			var timeRemainingSplit = timeRemaining.split(':')
+			var hoursRemaining = timeRemainingSplit[0]
+			var minutesRemaining = timeRemainingSplit[1]
+			var secondsRemaining = timeRemainingSplit[2]
 
 			var deviceVolume = 0
 			if (data.body.device) {
@@ -440,6 +448,9 @@ instance.prototype.PollPlaybackState = function () {
 			self.setVariable('songProgressSeconds', songProgress)
 			self.setVariable('songDurationSeconds', songDuration)
 			self.setVariable('songTimeRemaining', timeRemaining)
+			self.setVariable('songTimeRemainingHours', hoursRemaining)
+			self.setVariable('songTimeRemainingMinutes', minutesRemaining)
+			self.setVariable('songTimeRemainingSeconds', secondsRemaining)
 			self.setVariable('volume', deviceVolume)
 			self.setVariable('currentAlbumArt', albumArt)
 			self.setVariable('deviceName', self.ActiveDevice)
@@ -954,6 +965,18 @@ instance.prototype.initVariables = function () {
 	variables.push({
 		name: 'songTimeRemaining',
 		label: 'Time remaining in song (pretty formatted HH:MM:SS)',
+	})
+	variables.push({
+		name: 'songTimeRemainingHours',
+		label: 'Hours remaining in song (zero padded)',
+	})
+	variables.push({
+		name: 'songTimeRemainingMinutes',
+		label: 'Minutes remaining in song (zero padded)',
+	})
+	variables.push({
+		name: 'songTimeRemainingSeconds',
+		label: 'Seconds remaining in song (zero padded)',
 	})
 	variables.push({
 		name: 'volume',
