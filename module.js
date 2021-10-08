@@ -365,7 +365,6 @@ instance.prototype.PollPlaybackState = function () {
 	var self = this
 	self.spotifyApi.getMyCurrentPlaybackState().then(
 		function (data) {
-			// console.log(data.body)
 			if (data.body) {
 				if (data.body.is_playing) {
 					self.MusicPlaying = true
@@ -389,6 +388,14 @@ instance.prototype.PollPlaybackState = function () {
 
 				self.RepeatState = data.body.repeat_state
 				self.checkFeedbacks('is-repeat')
+
+				if (data.body.context) {
+					self.CurrentContext = data.body.context.uri.split(':')[2]
+				} else {
+					self.CurrentContext = null
+				}
+
+				self.checkFeedbacks('current-context')
 			}
 
 			var songProgress = 0
@@ -444,6 +451,7 @@ instance.prototype.PollPlaybackState = function () {
 			self.setVariable('isPlayingIcon', self.MusicPlayingIcon)
 			self.setVariable('isShuffle', self.ShuffleOn)
 			self.setVariable('repeat', self.RepeatState)
+			self.setVariable('currentContext', self.CurrentContext)
 			self.setVariable('songPercentage', songPercentage)
 			self.setVariable('songProgressSeconds', songProgress)
 			self.setVariable('songDurationSeconds', songDuration)
@@ -656,7 +664,7 @@ instance.prototype.actions = function (system) {
 			label: 'Play',
 		},
 		playSpecificList: {
-			label: 'Start Specific Playlist',
+			label: 'Start Specific Album / Artist / Playlist',
 			options: [
 				{
 					id: 'type',
@@ -914,6 +922,30 @@ instance.prototype.initFeedbacks = function () {
 		],
 	}
 
+	feedbacks['current-context'] = {
+		label: 'Change button colour if current album/artist/playlist id matches value',
+		description: 'If active album/artist/playlist matches value, change button color',
+		options: [
+			{
+				type: 'colorpicker',
+				label: 'Foreground color',
+				id: 'fg',
+				default: self.rgb(255, 255, 255),
+			},
+			{
+				type: 'colorpicker',
+				label: 'Background color',
+				id: 'bg',
+				default: self.rgb(0, 255, 0),
+			},
+			{
+				type: 'textinput',
+				label: 'Item ID',
+				id: 'id',
+			},
+		],
+	}
+
 	self.setFeedbackDefinitions(feedbacks)
 }
 
@@ -949,6 +981,10 @@ instance.prototype.initVariables = function () {
 	variables.push({
 		name: 'repeat',
 		label: 'Is Repeat Enabled',
+	})
+	variables.push({
+		name: 'currentContext',
+		label: 'Current Context ID',
 	})
 	variables.push({
 		name: 'songPercentage',
@@ -1086,6 +1122,14 @@ instance.prototype.feedback = function (feedback, bank) {
 	}
 	if (feedback.type === 'active-device') {
 		if (self.ActiveDevice.toLowerCase() == feedback.options.device.toLowerCase()) {
+			return {
+				color: feedback.options.fg,
+				bgcolor: feedback.options.bg,
+			}
+		}
+	}
+	if (feedback.type === 'current-context') {
+		if (self.CurrentContext == feedback.options.id) {
 			return {
 				color: feedback.options.fg,
 				bgcolor: feedback.options.bg,
