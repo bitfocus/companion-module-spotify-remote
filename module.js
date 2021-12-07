@@ -32,6 +32,7 @@ function instance(system, id, config) {
 
 instance.prototype.errorCheck = function (err) {
 	var self = this
+
 	//Error Code 401 represents out of date token
 	if (err.statusCode == '401') {
 		return self.spotifyApi.refreshAccessToken().then(
@@ -41,11 +42,13 @@ instance.prototype.errorCheck = function (err) {
 			},
 			function (err) {
 				console.log('Could not refresh access token', err)
+				if (self.config.debugMode) self.log('info', 'Could not refresh access token' + JSON.stringify(err))
 				return false
 			}
 		)
 	} else {
-		console.log('Something went wrong with an API Call: ' + err)
+		console.log('Something went wrong with an API Call: ', err)
+		if (self.config.debugMode) self.log('info', 'Something went wrong with an API Call: ' + JSON.stringify(err))
 		return Promise.resolve(false)
 	}
 }
@@ -641,6 +644,11 @@ instance.prototype.config_fields = function () {
 			id: 'authURL',
 			width: 12,
 			label: 'Auth URL',
+		},
+		{
+			type: 'checkbox',
+			id: 'debugMode',
+			label: 'Enable Debug Mode',
 		},
 	]
 }
