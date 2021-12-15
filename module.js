@@ -427,7 +427,7 @@ instance.prototype.PollPlaybackState = function () {
 				songName = data.body.item.name
 				albumName = data.body.item.album.name
 				artistName = data.body.item.artists[0].name
-				albumArt = data.body.item.album.images[0].url
+				if (data.body.item.album && data.body.item.album.images.length) albumArt = data.body.item.album.images[0].url
 			} else {
 				timeRemaining = new Date(0).toISOString().substr(11, 8)
 			}
