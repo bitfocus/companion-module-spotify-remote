@@ -6,9 +6,11 @@
 import InstanceSkel = require('../../../instance_skel')
 import SpotifyWebApi = require('spotify-web-api-node')
 import { GetConfigFields, DeviceConfig } from './config'
-import { GetFeedbacksList } from './feedback'
+import { FeedbackId, GetFeedbacksList } from './feedback'
 import { GetActionsList } from './actions'
 import { CompanionSystem } from '../../../instance_skel_types'
+import PQueue from 'p-queue'
+import { SpotifyPlaybackState, SpotifyState } from './state'
 
 const scopes = [
 	'user-read-playback-state',
@@ -24,574 +26,450 @@ const scopes = [
 ]
 
 class SpotifyInstance extends InstanceSkel<DeviceConfig> {
-	private spotifyApi: SpotifyWebApi | undefined
+	private readonly spotifyApi = new SpotifyWebApi()
+	private pollTimer: NodeJS.Timeout | undefined
+
+	private readonly state: SpotifyState
+	private readonly pollQueue = new PQueue({ concurrency: 1 })
+
 	constructor(system: CompanionSystem, id: string, config: DeviceConfig) {
 		super(system, id, config)
+
+		this.state = {
+			playbackState: null,
+		}
 	}
-	errorCheck(err) {
-		let self = this
-		//Error Code 401 represents out of date token
-		if (err.statusCode == '401') {
-			return self.spotifyApi.refreshAccessToken().then(
-				function (data) {
-					self.spotifyApi.setAccessToken(data.body['access_token'])
-					return true
-				},
-				function (err) {
-					console.log('Could not refresh access token', err)
-					return false
-				}
-			)
+	private async checkIfApiErrorShouldRetry(err: any) {
+		// Error Code 401 represents out of date token
+		if ('statusCode' in err && err.statusCode == '401') {
+			try {
+				const data = await this.spotifyApi.refreshAccessToken()
+				this.spotifyApi.setAccessToken(data.body['access_token'])
+				return true
+			} catch (e: any) {
+				this.debug(`Failed to refresh access token: ${e.toString()}`)
+				return false
+			}
 		} else {
-			console.log('Something went wrong with an API Call: ' + err)
-			return Promise.resolve(false)
+			this.debug(`Something went wrong with an API Call: ${err.toString()}`)
+			// TODO - log better
+			return false
 		}
 	}
-	ChangePlayState(action, device) {
-		let self = this
-		self.spotifyApi.getMyCurrentPlaybackState().then(
-			function (data) {
-				// Output items
-				if (data.body && data.body.is_playing) {
-					if (action.action == 'pause' || action.action == 'play/pause') {
-						self.spotifyApi.pause().then(
-							function () {
-								self.PollPlaybackState()
-							},
-							function (err) {
-								console.log('Something went wrong!', err)
-							}
-						)
-					}
-				} else {
-					if (action.action == 'play' || action.action == 'play/pause') {
-						self.spotifyApi
-							.play({
-								device_id: device,
-							})
-							.then(
-								function () {
-									self.PollPlaybackState()
-								},
-								function (err) {
-									console.log('Something went wrong!', err)
-								}
-							)
-					}
-				}
-			},
-			function (err) {
-				self.errorCheck(err).then(function (retry) {
-					if (retry) {
-						self.ChangePlayState(action)
-					}
-				})
-			}
-		)
-	}
-	PlaySpecific(action, device) {
-		let self = this
+	// ChangePlayState(action, device) {
+	// 	let self = this
+	// 	self.spotifyApi.getMyCurrentPlaybackState().then(
+	// 		function (data) {
+	// 			// Output items
+	// 			if (data.body && data.body.is_playing) {
+	// 				if (action.action == 'pause' || action.action == 'play/pause') {
+	// 					self.spotifyApi.pause().then(
+	// 						function () {
+	// 							self.PollPlaybackState()
+	// 						},
+	// 						function (err) {
+	// 							console.log('Something went wrong!', err)
+	// 						}
+	// 					)
+	// 				}
+	// 			} else {
+	// 				if (action.action == 'play' || action.action == 'play/pause') {
+	// 					self.spotifyApi
+	// 						.play({
+	// 							device_id: device,
+	// 						})
+	// 						.then(
+	// 							function () {
+	// 								self.PollPlaybackState()
+	// 							},
+	// 							function (err) {
+	// 								console.log('Something went wrong!', err)
+	// 							}
+	// 						)
+	// 				}
+	// 			}
+	// 		},
+	// 		function (err) {
+	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 				if (retry) {
+	// 					self.ChangePlayState(action)
+	// 				}
+	// 			})
+	// 		}
+	// 	)
+	// }
+	// PlaySpecific(action, device) {
+	// 	let self = this
 
-		let params = {
-			device_id: device,
+	// 	let params = {
+	// 		device_id: device,
+	// 	}
+
+	// 	if (action.action == 'playSpecificList') {
+	// 		params.context_uri = `spotify:${action.options.type}:${action.options.context_uri}`
+	// 	}
+
+	// 	if (action.action == 'playSpecificTracks') {
+	// 		let tracks = action.options.tracks.split(',')
+	// 		tracks = tracks.map((track) => 'spotify:track:' + track.trim())
+	// 		params.uris = tracks
+	// 	}
+
+	// 	self.spotifyApi.getMyCurrentPlaybackState().then(
+	// 		function (data) {
+	// 			if (data.body && data.body.context && data.body.context.uri === params.context_uri) {
+	// 				if (
+	// 					!action.options.behavior ||
+	// 					action.options.behavior == 'return' ||
+	// 					(action.options.behavior == 'resume' && data.body.is_playing)
+	// 				) {
+	// 					return this.log('warning', `Already playing that ${action.options.type}: ${action.options.context_uri}`)
+	// 				}
+
+	// 				if (action.options.behavior == 'resume') {
+	// 					return self.spotifyApi
+	// 						.play({
+	// 							device_id: device,
+	// 						})
+	// 						.then(
+	// 							function (res) {
+	// 								console.log('done')
+	// 								self.PollPlaybackState()
+	// 							},
+	// 							function (err) {
+	// 								console.log('Something went wrong!', err)
+	// 							}
+	// 						)
+	// 				}
+	// 			}
+
+	// 			self.spotifyApi.play(params).then(
+	// 				function (res) {
+	// 					console.log('done')
+	// 					self.PollPlaybackState()
+	// 				},
+	// 				function (err) {
+	// 					console.log('Something went wrong!', err)
+	// 				}
+	// 			)
+	// 		},
+	// 		function (err) {
+	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 				if (retry) {
+	// 					self.PlaySpecific(action)
+	// 				}
+	// 			})
+	// 		}
+	// 	)
+	// }
+	// ChangeShuffleState(action) {
+	// 	let self = this
+	// 	self.spotifyApi.getMyCurrentPlaybackState().then(
+	// 		function (data) {
+	// 			if (data.body && data.body.shuffle_state) {
+	// 				if (action.action == 'shuffleOff' || action.action == 'shuffleToggle') {
+	// 					self.spotifyApi.setShuffle(false).then(
+	// 						function () {
+	// 							self.PollPlaybackState()
+	// 						},
+	// 						function (err) {
+	// 							self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 								if (retry) {
+	// 									self.ChangeShuffleState(action)
+	// 								}
+	// 							})
+	// 						}
+	// 					)
+	// 				}
+	// 			} else {
+	// 				if (action.action == 'shuffleOn' || action.action == 'shuffleToggle') {
+	// 					self.spotifyApi.setShuffle(true).then(
+	// 						function () {
+	// 							self.PollPlaybackState()
+	// 						},
+	// 						function (err) {
+	// 							self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 								if (retry) {
+	// 									self.ChangeShuffleState(action)
+	// 								}
+	// 							})
+	// 						}
+	// 					)
+	// 				}
+	// 			}
+	// 		},
+	// 		function (err) {
+	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 				if (retry) {
+	// 					self.ChangeShuffleState(action)
+	// 				}
+	// 			})
+	// 		}
+	// 	)
+	// }
+	// ChangeRepeatState(action) {
+	// 	let self = this
+	// 	self.spotifyApi.getMyCurrentPlaybackState().then(
+	// 		function (data) {
+	// 			let currentState = data.body.repeat_state
+
+	// 			if (action.options.state == currentState) {
+	// 				console.log('Selected repeat state is already current')
+	// 				return
+	// 			}
+
+	// 			self.spotifyApi.setRepeat(action.options.state).then(
+	// 				function () {
+	// 					self.PollPlaybackState()
+	// 				},
+	// 				function (err) {
+	// 					self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 						if (retry) {
+	// 							self.ChangeRepeatState(action)
+	// 						}
+	// 					})
+	// 				}
+	// 			)
+	// 		},
+	// 		function (err) {
+	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 				if (retry) {
+	// 					self.ChangeRepeatState(action)
+	// 				}
+	// 			})
+	// 		}
+	// 	)
+	// }
+	// SeekPosition(action) {
+	// 	let self = this
+	// 	let ms = action.options.position
+
+	// 	self.spotifyApi.seek(ms).then(
+	// 		function () {
+	// 			self.PollPlaybackState()
+	// 		},
+	// 		function (err) {
+	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 				if (retry) {
+	// 					self.SeekPosition(action)
+	// 				}
+	// 			})
+	// 		}
+	// 	)
+	// }
+	// ChangeVolume(action, device, specific = false) {
+	// 	let self = this
+	// 	let availableDevices
+	// 	let currentVolume
+	// 	let volumeChangable = true
+	// 	self.spotifyApi.getMyDevices().then(
+	// 		function (data) {
+	// 			availableDevices = data.body.devices
+
+	// 			for (i = 0; i < availableDevices.length; i++) {
+	// 				if (availableDevices[i].id == device) {
+	// 					if (availableDevices[i].type == 'Tablet' || availableDevices[i].type == 'Phone') {
+	// 						volumeChangable = false
+	// 					}
+	// 					currentVolume = availableDevices[i].volume_percent
+	// 				}
+	// 			}
+	// 			if (volumeChangable && !specific) {
+	// 				if (action.action == 'volumeUp') {
+	// 					currentVolume = currentVolume - -action.options.volumeUpAmount //double negitive because JS things
+	// 					if (currentVolume > 100) {
+	// 						currentVolume = 100
+	// 					}
+	// 				} else {
+	// 					currentVolume = currentVolume - action.options.volumeDownAmount
+	// 					if (currentVolume < 0) {
+	// 						currentVolume = 0
+	// 					}
+	// 				}
+	// 			}
+
+	// 			if (specific) {
+	// 				currentVolume = action.options.value
+	// 			}
+
+	// 			self.spotifyApi
+	// 				.setVolume(currentVolume, {
+	// 					device_id: device,
+	// 				})
+	// 				.then(
+	// 					function () {},
+	// 					function (err) {
+	// 						self.checkIfApiErrorShouldRetry(err)
+	// 					}
+	// 				)
+	// 		},
+	// 		function (err) {
+	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 				if (retry) {
+	// 					self.ChangeVolume(action)
+	// 				}
+	// 			})
+	// 		}
+	// 	)
+	// }
+	// SkipSong() {
+	// 	let self = this
+	// 	self.spotifyApi.skipToNext().then(
+	// 		function () {},
+	// 		function (err) {
+	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 				if (retry) {
+	// 					self.SkipSong()
+	// 				}
+	// 			})
+	// 		}
+	// 	)
+	// }
+	// PreviousSong() {
+	// 	let self = this
+	// 	self.spotifyApi.skipToPrevious().then(
+	// 		function () {},
+	// 		function (err) {
+	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 				if (retry) {
+	// 					self.PreviousSong()
+	// 				}
+	// 			})
+	// 		}
+	// 	)
+	// }
+	// TransferPlayback(id) {
+	// 	let self = this
+	// 	id = [id]
+	// 	self.spotifyApi
+	// 		.transferMyPlayback(id, {
+	// 			play: true,
+	// 		})
+	// 		.then(
+	// 			function () {
+	// 				self.PollPlaybackState()
+	// 			},
+	// 			function (err) {
+	// 				self.checkIfApiErrorShouldRetry(err).then(function (retry) {
+	// 					if (retry) {
+	// 						self.TransferPlayback(id)
+	// 					}
+	// 				})
+	// 			}
+	// 		)
+	// }
+
+	private applyConfigValues(config: DeviceConfig): void {
+		if (config.clientId) {
+			this.spotifyApi.setClientId(config.clientId)
+		} else {
+			this.spotifyApi.resetClientId()
 		}
 
-		if (action.action == 'playSpecificList') {
-			params.context_uri = `spotify:${action.options.type}:${action.options.context_uri}`
+		if (config.clientSecret) {
+			this.spotifyApi.setClientSecret(config.clientSecret)
+		} else {
+			this.spotifyApi.resetClientSecret()
 		}
 
-		if (action.action == 'playSpecificTracks') {
-			let tracks = action.options.tracks.split(',')
-			tracks = tracks.map((track) => 'spotify:track:' + track.trim())
-			params.uris = tracks
+		if (config.redirectUri) {
+			this.spotifyApi.setRedirectURI(config.redirectUri)
+		} else {
+			this.spotifyApi.resetRedirectURI()
 		}
 
-		self.spotifyApi.getMyCurrentPlaybackState().then(
-			function (data) {
-				if (data.body && data.body.context && data.body.context.uri === params.context_uri) {
-					if (
-						!action.options.behavior ||
-						action.options.behavior == 'return' ||
-						(action.options.behavior == 'resume' && data.body.is_playing)
-					) {
-						return this.log('warning', `Already playing that ${action.options.type}: ${action.options.context_uri}`)
-					}
+		if (config.accessToken) {
+			this.spotifyApi.setAccessToken(config.accessToken)
+		} else {
+			this.spotifyApi.resetAccessToken()
+		}
 
-					if (action.options.behavior == 'resume') {
-						return self.spotifyApi
-							.play({
-								device_id: device,
-							})
-							.then(
-								function (res) {
-									console.log('done')
-									self.PollPlaybackState()
-								},
-								function (err) {
-									console.log('Something went wrong!', err)
-								}
-							)
-					}
-				}
-
-				self.spotifyApi.play(params).then(
-					function (res) {
-						console.log('done')
-						self.PollPlaybackState()
-					},
-					function (err) {
-						console.log('Something went wrong!', err)
-					}
-				)
-			},
-			function (err) {
-				self.errorCheck(err).then(function (retry) {
-					if (retry) {
-						self.PlaySpecific(action)
-					}
-				})
-			}
-		)
+		if (config.refreshToken) {
+			this.spotifyApi.setRefreshToken(config.refreshToken)
+		} else {
+			this.spotifyApi.resetRefreshToken()
+		}
 	}
-	ChangeShuffleState(action) {
-		let self = this
-		self.spotifyApi.getMyCurrentPlaybackState().then(
-			function (data) {
-				if (data.body && data.body.shuffle_state) {
-					if (action.action == 'shuffleOff' || action.action == 'shuffleToggle') {
-						self.spotifyApi.setShuffle(false).then(
-							function () {
-								self.PollPlaybackState()
-							},
-							function (err) {
-								self.errorCheck(err).then(function (retry) {
-									if (retry) {
-										self.ChangeShuffleState(action)
-									}
-								})
-							}
-						)
-					}
-				} else {
-					if (action.action == 'shuffleOn' || action.action == 'shuffleToggle') {
-						self.spotifyApi.setShuffle(true).then(
-							function () {
-								self.PollPlaybackState()
-							},
-							function (err) {
-								self.errorCheck(err).then(function (retry) {
-									if (retry) {
-										self.ChangeShuffleState(action)
-									}
-								})
-							}
-						)
-					}
-				}
-			},
-			function (err) {
-				self.errorCheck(err).then(function (retry) {
-					if (retry) {
-						self.ChangeShuffleState(action)
-					}
-				})
-			}
-		)
-	}
-	ChangeRepeatState(action) {
-		let self = this
-		self.spotifyApi.getMyCurrentPlaybackState().then(
-			function (data) {
-				let currentState = data.body.repeat_state
 
-				if (action.options.state == currentState) {
-					console.log('Selected repeat state is already current')
-					return
-				}
+	updateConfig(config: DeviceConfig): void {
+		this.config = config
 
-				self.spotifyApi.setRepeat(action.options.state).then(
-					function () {
-						self.PollPlaybackState()
-					},
-					function (err) {
-						self.errorCheck(err).then(function (retry) {
-							if (retry) {
-								self.ChangeRepeatState(action)
-							}
-						})
-					}
-				)
-			},
-			function (err) {
-				self.errorCheck(err).then(function (retry) {
-					if (retry) {
-						self.ChangeRepeatState(action)
-					}
-				})
-			}
-		)
-	}
-	SeekPosition(action) {
-		let self = this
-		let ms = action.options.position
+		this.applyConfigValues(config)
 
-		self.spotifyApi.seek(ms).then(
-			function () {
-				self.PollPlaybackState()
-			},
-			function (err) {
-				self.errorCheck(err).then(function (retry) {
-					if (retry) {
-						self.SeekPosition(action)
-					}
-				})
-			}
-		)
-	}
-	ChangeVolume(action, device, specific = false) {
-		let self = this
-		let availableDevices
-		let currentVolume
-		let volumeChangable = true
-		self.spotifyApi.getMyDevices().then(
-			function (data) {
-				availableDevices = data.body.devices
-
-				for (i = 0; i < availableDevices.length; i++) {
-					if (availableDevices[i].id == device) {
-						if (availableDevices[i].type == 'Tablet' || availableDevices[i].type == 'Phone') {
-							volumeChangable = false
-						}
-						currentVolume = availableDevices[i].volume_percent
-					}
-				}
-				if (volumeChangable && !specific) {
-					if (action.action == 'volumeUp') {
-						currentVolume = currentVolume - -action.options.volumeUpAmount //double negitive because JS things
-						if (currentVolume > 100) {
-							currentVolume = 100
-						}
-					} else {
-						currentVolume = currentVolume - action.options.volumeDownAmount
-						if (currentVolume < 0) {
-							currentVolume = 0
-						}
-					}
-				}
-
-				if (specific) {
-					currentVolume = action.options.value
-				}
-
-				self.spotifyApi
-					.setVolume(currentVolume, {
-						device_id: device,
-					})
-					.then(
-						function () {},
-						function (err) {
-							self.errorCheck(err)
-						}
-					)
-			},
-			function (err) {
-				self.errorCheck(err).then(function (retry) {
-					if (retry) {
-						self.ChangeVolume(action)
-					}
-				})
-			}
-		)
-	}
-	SkipSong() {
-		let self = this
-		self.spotifyApi.skipToNext().then(
-			function () {},
-			function (err) {
-				self.errorCheck(err).then(function (retry) {
-					if (retry) {
-						self.SkipSong()
-					}
-				})
-			}
-		)
-	}
-	PreviousSong() {
-		let self = this
-		self.spotifyApi.skipToPrevious().then(
-			function () {},
-			function (err) {
-				self.errorCheck(err).then(function (retry) {
-					if (retry) {
-						self.PreviousSong()
-					}
-				})
-			}
-		)
-	}
-	TransferPlayback(id) {
-		let self = this
-		id = [id]
-		self.spotifyApi
-			.transferMyPlayback(id, {
-				play: true,
-			})
-			.then(
-				function () {
-					self.PollPlaybackState()
-				},
-				function (err) {
-					self.errorCheck(err).then(function (retry) {
-						if (retry) {
-							self.TransferPlayback(id)
-						}
-					})
-				}
-			)
-	}
-	PollPlaybackState() {
-		let self = this
-		self.spotifyApi.getMyCurrentPlaybackState().then(
-			function (data) {
-				if (data.body) {
-					if (data.body.is_playing) {
-						self.MusicPlaying = true
-						self.MusicPlayingIcon = '\u23F5'
-						self.checkFeedbacks('is-playing')
-					}
-					if (!data.body.is_playing) {
-						self.MusicPlaying = false
-						self.MusicPlayingIcon = '\u23F9'
-						self.checkFeedbacks('is-playing')
-					}
-
-					if (data.body.shuffle_state) {
-						self.ShuffleOn = true
-						self.checkFeedbacks('is-shuffle')
-					}
-					if (!data.body.shuffle_state) {
-						self.ShuffleOn = false
-						self.checkFeedbacks('is-shuffle')
-					}
-
-					self.RepeatState = data.body.repeat_state
-					self.checkFeedbacks('is-repeat')
-
-					if (data.body.context) {
-						self.CurrentContext = data.body.context.uri.split(':')[2]
-					} else {
-						self.CurrentContext = null
-					}
-
-					self.checkFeedbacks('current-context')
-				}
-
-				let songProgress = 0
-				let songDuration = 0
-				let songPercentage = 0
-				let timeRemaining = 0
-				let songName = ''
-				let albumName = ''
-				let artistName = ''
-				let albumArt = ''
-
-				if (data.body.item) {
-					songProgress = data.body.progress_ms
-					songDuration = data.body.item.duration_ms
-					songPercentage = songProgress / songDuration
-
-					songPercentage = songPercentage * 100
-					songPercentage = songPercentage.toFixed(0)
-
-					songProgress = songProgress / 1000
-					songProgress = songProgress.toFixed(0)
-
-					songDuration = songDuration / 1000
-					songDuration = songDuration.toFixed(0)
-
-					timeRemaining = songDuration - songProgress
-					timeRemaining = new Date(timeRemaining * 1000).toISOString().substr(11, 8)
-
-					songName = data.body.item.name
-					albumName = data.body.item.album.name
-					artistName = data.body.item.artists[0].name
-					if (data.body.item.album && data.body.item.album.images.length) albumArt = data.body.item.album.images[0].url
-				} else {
-					timeRemaining = new Date(0).toISOString().substr(11, 8)
-				}
-
-				let timeRemainingSplit = timeRemaining.split(':')
-				let hoursRemaining = timeRemainingSplit[0]
-				let minutesRemaining = timeRemainingSplit[1]
-				let secondsRemaining = timeRemainingSplit[2]
-
-				let deviceVolume = 0
-				if (data.body.device) {
-					deviceVolume = data.body.device.volume_percent
-					self.ActiveDevice = data.body.device.name
-					self.checkFeedbacks('active-device')
-				}
-
-				self.setVariable('songName', songName)
-				self.setVariable('albumName', albumName)
-				self.setVariable('artistName', artistName)
-				self.setVariable('isPlaying', self.MusicPlaying)
-				self.setVariable('isPlayingIcon', self.MusicPlayingIcon)
-				self.setVariable('isShuffle', self.ShuffleOn)
-				self.setVariable('repeat', self.RepeatState)
-				self.setVariable('currentContext', self.CurrentContext)
-				self.setVariable('songPercentage', songPercentage)
-				self.setVariable('songProgressSeconds', songProgress)
-				self.setVariable('songDurationSeconds', songDuration)
-				self.setVariable('songTimeRemaining', timeRemaining)
-				self.setVariable('songTimeRemainingHours', hoursRemaining)
-				self.setVariable('songTimeRemainingMinutes', minutesRemaining)
-				self.setVariable('songTimeRemainingSeconds', secondsRemaining)
-				self.setVariable('volume', deviceVolume)
-				self.setVariable('currentAlbumArt', albumArt)
-				self.setVariable('deviceName', self.ActiveDevice)
-			},
-			function (err) {
-				self.errorCheck(err).then(function (retry) {
-					if (retry) {
-						self.PollPlaybackState()
-					}
-				})
-			}
-		)
-	}
-	updateConfig(config) {
-		let self = this
-
-		self.config = config
-		self.spotifyApi.setClientId(self.config.clientId)
-		self.spotifyApi.setClientSecret(self.config.clientSecret)
-		self.spotifyApi.setRedirectURI(self.config.redirectUri)
-		if (self.config.code && !self.config.accessToken) {
-			self.spotifyApi.authorizationCodeGrant(self.config.code).then(
-				function (data) {
-					self.config.accessToken = data.body['access_token']
-					self.config.refreshToken = data.body['refresh_token']
-					self.saveConfig()
+		if (this.config.code && !this.config.accessToken) {
+			this.spotifyApi
+				.authorizationCodeGrant(this.config.code)
+				.then((data) => {
+					this.config.accessToken = data.body['access_token']
+					this.config.refreshToken = data.body['refresh_token']
+					this.saveConfig()
 
 					// Set the access token on the API object to use it in later calls
-					self.spotifyApi.setAccessToken(data.body['access_token'])
-					self.spotifyApi.setRefreshToken(data.body['refresh_token'])
-				},
-				function (err) {
-					self.errorCheck(err)
-				}
-			)
+					this.spotifyApi.setAccessToken(data.body['access_token'])
+					this.spotifyApi.setRefreshToken(data.body['refresh_token'])
+				})
+				.catch((err) => {
+					this.debug(`Failed to get access token: ${err.toString()}`)
+				})
 		}
 		if (
-			self.config.redirectUri &&
-			self.config.clientSecret &&
-			self.config.clientId &&
-			!self.config.accessToken &&
-			!self.config.code
+			this.config.redirectUri &&
+			this.config.clientSecret &&
+			this.config.clientId &&
+			!this.config.accessToken &&
+			!this.config.code
 		) {
-			self.config.authURL = self.spotifyApi.createAuthorizeURL(scopes)
-			self.saveConfig()
-		}
-		if (self.config.accessToken) {
-			self.spotifyApi.setAccessToken(self.config.accessToken)
-		}
-		if (self.config.refreshToken) {
-			self.spotifyApi.setRefreshToken(self.config.refreshToken)
+			this.config.authURL = this.spotifyApi.createAuthorizeURL(scopes, '')
+			this.saveConfig()
 		}
 
-		self.initActions()
+		this.initActions()
 	}
-	init() {
-		let self = this
+	init(): void {
+		this.status(this.STATUS_WARNING, 'Configuring')
 
-		self.status(self.STATUS_WARNING, 'Configuring')
+		this.applyConfigValues(this.config)
 
-		let spotifyApi = new SpotifyWebApi()
-		self.spotifyApi = spotifyApi
-		if (self.config.clientId) {
-			self.spotifyApi.setClientId(self.config.clientId)
-		}
-		if (self.config.clientSecret) {
-			self.spotifyApi.setClientSecret(self.config.clientSecret)
-		}
-		if (self.config.redirectUri) {
-			self.spotifyApi.setRedirectURI(self.config.redirectUri)
-		}
-		if (self.config.accessToken) {
-			self.spotifyApi.setAccessToken(self.config.accessToken)
-		}
-		if (self.config.refreshToken) {
-			self.spotifyApi.setRefreshToken(self.config.refreshToken)
-		}
-
-		self.spotifyApi.refreshAccessToken().then(
-			function (data) {
+		this.spotifyApi.refreshAccessToken().then(
+			(data) => {
 				// Save the access token so that it's used in future calls
-				self.spotifyApi.setAccessToken(data.body['access_token'])
+				this.spotifyApi.setAccessToken(data.body['access_token'])
 			},
-			function (err) {
+			(err) => {
 				console.log('Could not refresh access token', err)
 			}
 		)
 
-		if (self.Timer === undefined) {
-			self.Timer = setInterval(self.DoPoll.bind(self), 250) //Check every 0.25 seconds
+		if (!this.pollTimer) {
+			this.pollTimer = setInterval(() => this.queuePoll(), 250) // Check every 0.25 seconds
 		}
 
-		self.initActions()
-		self.initFeedbacks()
-		self.initVariables()
-		debug = self.debug
-		log = self.log
+		this.initActions()
+		this.initFeedbacks()
+		this.initVariables()
 	}
-	DoPoll() {
-		let self = this
 
-		// If everything is populated we can do the poll
-		if (
-			self.spotifyApi.getClientId() &&
-			self.spotifyApi.getAccessToken() &&
-			self.spotifyApi.getClientSecret() &&
-			self.spotifyApi.getRefreshToken()
-		) {
-			self.status(self.STATUS_OK)
-
-			self.PollPlaybackState()
-		} else {
-			self.status(self.STATUS_ERROR, 'Missing required config fields')
-		}
-	}
-	StopTimer() {
-		let self = this
-
-		if (self.Timer) {
-			clearInterval(self.Timer)
-			delete self.Timer
-		}
-	}
-	destroy() {
-		let self = this
-		self.StopTimer()
+	destroy(): void {
 		this.debug('destroy')
+
+		if (this.pollTimer) {
+			clearInterval(this.pollTimer)
+			delete this.pollTimer
+		}
 	}
 	config_fields() {
 		return GetConfigFields()
 	}
-	initActions() {
-		let self = this
-
-		const actions = GetActionsList(self)
-		self.setActions(actions)
+	private initActions() {
+		const actions = GetActionsList()
+		this.setActions(actions)
 	}
 	// Set up Feedbacks
-	initFeedbacks() {
-		let self = this
-
+	private initFeedbacks() {
 		const feedbacks = GetFeedbacksList(this, () => this.state)
-		self.setFeedbackDefinitions(feedbacks)
+		this.setFeedbackDefinitions(feedbacks)
 	}
-	initVariables() {
+	private initVariables() {
 		const variables = [
 			{
 				name: 'songName',
@@ -669,69 +547,252 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> {
 
 		this.setVariableDefinitions(variables)
 	}
-	action(action) {
-		let self = this
 
-		if (action.action == 'play/pause' || action.action == 'play' || action.action == 'pause') {
-			self.ChangePlayState(action, self.config.deviceId)
-		}
+	private canPoll(): boolean {
+		return !!(
+			this.spotifyApi.getClientId() &&
+			this.spotifyApi.getAccessToken() &&
+			this.spotifyApi.getClientSecret() &&
+			this.spotifyApi.getRefreshToken()
+		)
+	}
+	private queuePoll() {
+		// If everything is populated we can do the poll
+		if (this.canPoll()) {
+			this.status(this.STATUS_OK)
 
-		if (action.action == 'playSpecificList' || action.action == 'playSpecificTracks') {
-			self.PlaySpecific(action, self.config.deviceId)
-		}
-
-		if (action.action == 'shuffleToggle' || action.action == 'shuffleOn' || action.action == 'shuffleOff') {
-			self.ChangeShuffleState(action)
-		}
-
-		if (action.action == 'repeatState') {
-			self.ChangeRepeatState(action)
-		}
-
-		if (action.action == 'volumeUp' || action.action == 'volumeDown') {
-			self.ChangeVolume(action, self.config.deviceId)
-		}
-
-		if (action.action == 'volumeSpecific') {
-			self.ChangeVolume(action, self.config.deviceId, true)
-		}
-
-		if (action.action == 'seekPosition') {
-			self.SeekPosition(action, self.config.position)
-		}
-
-		if (action.action == 'skip') {
-			self.SkipSong()
-		}
-
-		if (action.action == 'previous') {
-			self.PreviousSong()
-		}
-
-		if (action.action == 'activeDeviceToConfig') {
-			self.spotifyApi.getMyDevices().then(
-				function (data) {
-					let availableDevices = data.body.devices
-					for (let i = 0; i < availableDevices.length; i++) {
-						if (availableDevices[i].is_active) {
-							self.config.deviceId = availableDevices[i].id
-							self.saveConfig()
+			if (this.pollQueue.size > 1) {
+				this.debug(`Poll queue overflow`)
+			} else {
+				this.pollQueue
+					.add(async () => {
+						if (this.canPoll()) {
+							try {
+								await this.doPollPlaybackState()
+							} catch (e: any) {
+								this.debug(`Poll failed: ${e.toString()}`)
+							}
 						}
-					}
-				},
-				function (err) {
-					console.log('Something went wrong!', err)
-				}
-			)
-		}
-
-		if (action.action == 'switchActiveDevice') {
-			let Id = action.options.deviceId
-			self.config.deviceId = Id
-			self.saveConfig()
-			self.TransferPlayback(self.config.deviceId)
+					})
+					.catch((e) => {
+						this.debug(`Failed to queue poll: ${e.toString()}`)
+					})
+			}
+		} else {
+			this.status(this.STATUS_ERROR, 'Missing required config fields')
 		}
 	}
+
+	private async doPollPlaybackState() {
+		try {
+			const data = await this.spotifyApi.getMyCurrentPlaybackState()
+
+			// Transform the library state into a minimal state that we want to track
+			let newState: SpotifyPlaybackState | null = null
+			if (data.body) {
+				newState = {
+					isPlaying: !!data.body.is_playing,
+					isShuffle: !!data.body.shuffle_state,
+					repeatState: data.body.repeat_state,
+					currentContext: data.body.context && data.body.context.uri.split(':')[2],
+					trackProgressMs: data.body.progress_ms ?? 0,
+					trackInfo: null,
+					deviceInfo: null,
+				}
+
+				if (data.body.item) {
+					newState.trackInfo = {
+						durationMs: data.body.item.duration_ms,
+						name: data.body.item.name,
+						artistName: null,
+						albumName: null,
+						albumImageUrl: null,
+					}
+
+					if ('artists' in data.body.item) {
+						const rawArtists = data.body.item.artists
+						newState.trackInfo.artistName = rawArtists.map((a) => a.name).join(', ')
+					}
+
+					if ('album' in data.body.item) {
+						const rawAlbum = data.body.item.album
+						newState.trackInfo.albumName = rawAlbum.name
+
+						if (rawAlbum.images.length > 0) newState.trackInfo.albumImageUrl = rawAlbum.images[0].url
+					}
+				}
+
+				if (data.body.device) {
+					newState.deviceInfo = {
+						id: data.body.device.id,
+						name: data.body.device.name,
+
+						volumePercent: data.body.device.volume_percent,
+					}
+				}
+			}
+
+			// Diff the state and inform companion of anything that changed
+			this.diffAndSavePlaybackState(newState)
+		} catch (err) {
+			const retry = await this.checkIfApiErrorShouldRetry(err)
+			if (retry) {
+				this.queuePoll()
+			} else {
+				// clear the playback state, as we don't know what is going on..
+				this.diffAndSavePlaybackState(null)
+			}
+		}
+	}
+
+	private diffAndSavePlaybackState(newState: SpotifyPlaybackState | null) {
+		const oldState = this.state.playbackState
+		this.state.playbackState = newState
+
+		// Collect updates for batch saving
+		const invalidatedFeedbacks: FeedbackId[] = []
+		const variableUpdates: { [variableId: string]: string | number | boolean | undefined } = {} // TODO - type of this
+
+		if (oldState?.isPlaying !== newState?.isPlaying) {
+			variableUpdates['isPlaying'] = !!newState?.isPlaying
+			variableUpdates['isPlayingIcon'] = newState?.isPlaying ? '\u23F5' : '\u23F9'
+
+			invalidatedFeedbacks.push(FeedbackId.IsPlaying)
+		}
+		if (oldState?.isShuffle !== newState?.isShuffle) {
+			invalidatedFeedbacks.push(FeedbackId.IsShuffle)
+			variableUpdates['isShuffle'] = !!newState?.isShuffle
+		}
+		if (oldState?.repeatState !== newState?.repeatState) {
+			invalidatedFeedbacks.push(FeedbackId.IsRepeat)
+			variableUpdates['repeat'] = newState?.repeatState ?? 'off'
+		}
+		if (oldState?.currentContext !== newState?.currentContext) {
+			this.checkFeedbacks('current-context')
+			variableUpdates['currentContext'] = newState?.currentContext ?? ''
+		}
+
+		// Track info
+		if (oldState?.trackInfo?.artistName !== newState?.trackInfo?.artistName) {
+			variableUpdates['artistName'] = newState?.trackInfo?.artistName ?? ''
+		}
+		if (oldState?.trackInfo?.name !== newState?.trackInfo?.name) {
+			variableUpdates['songName'] = newState?.trackInfo?.name ?? ''
+		}
+		if (oldState?.trackInfo?.albumName !== newState?.trackInfo?.albumName) {
+			variableUpdates['albumName'] = newState?.trackInfo?.albumName ?? ''
+		}
+		if (oldState?.trackInfo?.albumImageUrl !== newState?.trackInfo?.albumImageUrl) {
+			variableUpdates['currentAlbumArt'] = newState?.trackInfo?.albumImageUrl ?? ''
+		}
+
+		// Look for track progress/duration changes
+		let progressChanged = false
+		if (oldState?.trackProgressMs !== newState?.trackProgressMs) {
+			progressChanged = true
+			variableUpdates['songProgressSeconds'] = ((newState?.trackProgressMs ?? 0) / 1000).toFixed(0)
+		}
+		if (oldState?.trackInfo?.durationMs !== newState?.trackInfo?.durationMs) {
+			progressChanged = true
+			variableUpdates['songDurationSeconds'] = ((newState?.trackInfo?.durationMs ?? 0) / 1000).toFixed(0)
+		}
+		if (progressChanged) {
+			const progressMs = newState?.trackProgressMs ?? 0
+			const durationMs = newState?.trackInfo?.durationMs ?? 0
+
+			variableUpdates['songPercentage'] = durationMs > 0 ? ((progressMs / durationMs) * 100).toFixed(0) : '-'
+
+			const remainingTotalMs = Math.max(durationMs - progressMs, 0) // remaining clamped to >=0
+			const remainingSeconds = (remainingTotalMs / 1000) % 60
+			const remainingMins = (remainingTotalMs / (1000 * 60)) % 60
+			const remainingHours = remainingTotalMs / (1000 * 60 * 60)
+			const remainingStr = `${remainingHours.toString().padStart(2, '0')}:${remainingMins
+				.toString()
+				.padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+
+			variableUpdates['songTimeRemaining'] = remainingStr
+			variableUpdates['songTimeRemainingHours'] = remainingHours
+			variableUpdates['songTimeRemainingMinutes'] = remainingMins
+			variableUpdates['songTimeRemainingSeconds'] = remainingSeconds
+		}
+
+		// Device info
+		if (oldState?.deviceInfo?.volumePercent !== newState?.deviceInfo?.volumePercent) {
+			variableUpdates['volume'] = newState?.deviceInfo?.volumePercent ?? '-'
+		}
+		if (oldState?.deviceInfo?.name !== newState?.deviceInfo?.name) {
+			invalidatedFeedbacks.push(FeedbackId.ActiveDevice)
+			variableUpdates['deviceName'] = newState?.deviceInfo?.name ?? '-'
+		}
+
+		// Inform companion of the state changes
+		if (invalidatedFeedbacks.length > 0) this.checkFeedbacks(...invalidatedFeedbacks)
+		if (Object.keys(variableUpdates).length > 0) this.setVariables(variableUpdates as any)
+	}
+
+	// action(action) {
+	// 	let self = this
+
+	// 	if (action.action == 'play/pause' || action.action == 'play' || action.action == 'pause') {
+	// 		self.ChangePlayState(action, self.config.deviceId)
+	// 	}
+
+	// 	if (action.action == 'playSpecificList' || action.action == 'playSpecificTracks') {
+	// 		self.PlaySpecific(action, self.config.deviceId)
+	// 	}
+
+	// 	if (action.action == 'shuffleToggle' || action.action == 'shuffleOn' || action.action == 'shuffleOff') {
+	// 		self.ChangeShuffleState(action)
+	// 	}
+
+	// 	if (action.action == 'repeatState') {
+	// 		self.ChangeRepeatState(action)
+	// 	}
+
+	// 	if (action.action == 'volumeUp' || action.action == 'volumeDown') {
+	// 		self.ChangeVolume(action, self.config.deviceId)
+	// 	}
+
+	// 	if (action.action == 'volumeSpecific') {
+	// 		self.ChangeVolume(action, self.config.deviceId, true)
+	// 	}
+
+	// 	if (action.action == 'seekPosition') {
+	// 		self.SeekPosition(action, self.config.position)
+	// 	}
+
+	// 	if (action.action == 'skip') {
+	// 		self.SkipSong()
+	// 	}
+
+	// 	if (action.action == 'previous') {
+	// 		self.PreviousSong()
+	// 	}
+
+	// 	if (action.action == 'activeDeviceToConfig') {
+	// 		self.spotifyApi.getMyDevices().then(
+	// 			function (data) {
+	// 				let availableDevices = data.body.devices
+	// 				for (let i = 0; i < availableDevices.length; i++) {
+	// 					if (availableDevices[i].is_active) {
+	// 						self.config.deviceId = availableDevices[i].id
+	// 						self.saveConfig()
+	// 					}
+	// 				}
+	// 			},
+	// 			function (err) {
+	// 				console.log('Something went wrong!', err)
+	// 			}
+	// 		)
+	// 	}
+
+	// 	if (action.action == 'switchActiveDevice') {
+	// 		let Id = action.options.deviceId
+	// 		self.config.deviceId = Id
+	// 		self.saveConfig()
+	// 		self.TransferPlayback(self.config.deviceId)
+	// 	}
+	// }
 }
 
 export = SpotifyInstance

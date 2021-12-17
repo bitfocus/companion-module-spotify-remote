@@ -47,12 +47,13 @@ export function GetActionsList(): CompanionActions {
 				{
 					id: 'type',
 					type: 'dropdown',
-					required: true,
+					label: 'Type',
 					choices: [
 						{ id: 'album', label: 'Album' },
 						{ id: 'artist', label: 'Artist' },
 						{ id: 'playlist', label: 'Playlist' },
 					],
+					default: 'album',
 				},
 				{
 					tooltip: 'Provide the ID for the item',

@@ -2,7 +2,7 @@ import { SomeCompanionConfigField } from '../../../instance_skel_types'
 
 export interface DeviceConfig {
 	clientId?: string
-	clientSecret?: boolean
+	clientSecret?: string
 	redirectUri?: string
 	code?: string
 	accessToken?: string
