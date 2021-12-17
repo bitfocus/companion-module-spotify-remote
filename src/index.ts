@@ -1,8 +1,3 @@
-//TODO:
-// Clean up code, volume function, shuffle function, play function all in a different file. Startup and config function for setting all of the wrapper vars too
-// Seek on transfer to fix skipping due to spotifty api being bad.
-// Separate polling of data from variable state update to allow smoother status updates
-
 import InstanceSkel = require('../../../instance_skel')
 import SpotifyWebApi = require('spotify-web-api-node')
 import { GetConfigFields, DeviceConfig } from './config'
@@ -62,48 +57,7 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 			return false
 		}
 	}
-	// ChangePlayState(action, device) {
-	// 	let self = this
-	// 	self.spotifyApi.getMyCurrentPlaybackState().then(
-	// 		function (data) {
-	// 			// Output items
-	// 			if (data.body && data.body.is_playing) {
-	// 				if (action.action == 'pause' || action.action == 'play/pause') {
-	// 					self.spotifyApi.pause().then(
-	// 						function () {
-	// 							self.PollPlaybackState()
-	// 						},
-	// 						function (err) {
-	// 							console.log('Something went wrong!', err)
-	// 						}
-	// 					)
-	// 				}
-	// 			} else {
-	// 				if (action.action == 'play' || action.action == 'play/pause') {
-	// 					self.spotifyApi
-	// 						.play({
-	// 							device_id: device,
-	// 						})
-	// 						.then(
-	// 							function () {
-	// 								self.PollPlaybackState()
-	// 							},
-	// 							function (err) {
-	// 								console.log('Something went wrong!', err)
-	// 							}
-	// 						)
-	// 				}
-	// 			}
-	// 		},
-	// 		function (err) {
-	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 				if (retry) {
-	// 					self.ChangePlayState(action)
-	// 				}
-	// 			})
-	// 		}
-	// 	)
-	// }
+
 	// PlaySpecific(action, device) {
 	// 	let self = this
 
@@ -213,39 +167,7 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 	// 		}
 	// 	)
 	// }
-	// ChangeRepeatState(action) {
-	// 	let self = this
-	// 	self.spotifyApi.getMyCurrentPlaybackState().then(
-	// 		function (data) {
-	// 			let currentState = data.body.repeat_state
 
-	// 			if (action.options.state == currentState) {
-	// 				console.log('Selected repeat state is already current')
-	// 				return
-	// 			}
-
-	// 			self.spotifyApi.setRepeat(action.options.state).then(
-	// 				function () {
-	// 					self.PollPlaybackState()
-	// 				},
-	// 				function (err) {
-	// 					self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 						if (retry) {
-	// 							self.ChangeRepeatState(action)
-	// 						}
-	// 					})
-	// 				}
-	// 			)
-	// 		},
-	// 		function (err) {
-	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 				if (retry) {
-	// 					self.ChangeRepeatState(action)
-	// 				}
-	// 			})
-	// 		}
-	// 	)
-	// }
 	// SeekPosition(action) {
 	// 	let self = this
 	// 	let ms = action.options.position
@@ -262,53 +184,6 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 	// 			})
 	// 		}
 	// 	)
-	// }
-
-	// SkipSong() {
-	// 	let self = this
-	// 	self.spotifyApi.skipToNext().then(
-	// 		function () {},
-	// 		function (err) {
-	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 				if (retry) {
-	// 					self.SkipSong()
-	// 				}
-	// 			})
-	// 		}
-	// 	)
-	// }
-	// PreviousSong() {
-	// 	let self = this
-	// 	self.spotifyApi.skipToPrevious().then(
-	// 		function () {},
-	// 		function (err) {
-	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 				if (retry) {
-	// 					self.PreviousSong()
-	// 				}
-	// 			})
-	// 		}
-	// 	)
-	// }
-	// TransferPlayback(id) {
-	// 	let self = this
-	// 	id = [id]
-	// 	self.spotifyApi
-	// 		.transferMyPlayback(id, {
-	// 			play: true,
-	// 		})
-	// 		.then(
-	// 			function () {
-	// 				self.PollPlaybackState()
-	// 			},
-	// 			function (err) {
-	// 				self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 					if (retry) {
-	// 						self.TransferPlayback(id)
-	// 					}
-	// 				})
-	// 			}
-	// 		)
 	// }
 
 	private applyConfigValues(config: DeviceConfig): void {
@@ -415,9 +290,14 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 	private initActions() {
 		const actions = GetActionsList((fcn) => {
 			if (this.config.deviceId && this.canPollOrPost()) {
-				fcn(this, this.config.deviceId).catch((e) => {
-					this.debug(`Failed to execute action: ${e.toString()}`)
-				})
+				fcn(this, this.config.deviceId)
+					.then(() => {
+						// Do a poll asap
+						this.queuePoll()
+					})
+					.catch((e) => {
+						this.debug(`Failed to execute action: ${e.toString()}`)
+					})
 			}
 		})
 		this.setActions(actions)
@@ -514,7 +394,7 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 			this.spotifyApi.getRefreshToken()
 		)
 	}
-	private queuePoll() {
+	public queuePoll(): void {
 		// If everything is populated we can do the poll
 		if (this.canPollOrPost()) {
 			if (this.pollQueue.size > 1) {
@@ -704,20 +584,8 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 	// 		self.ChangeShuffleState(action)
 	// 	}
 
-	// 	if (action.action == 'repeatState') {
-	// 		self.ChangeRepeatState(action)
-	// 	}
-
 	// 	if (action.action == 'seekPosition') {
 	// 		self.SeekPosition(action, self.config.position)
-	// 	}
-
-	// 	if (action.action == 'skip') {
-	// 		self.SkipSong()
-	// 	}
-
-	// 	if (action.action == 'previous') {
-	// 		self.PreviousSong()
 	// 	}
 
 	// 	if (action.action == 'activeDeviceToConfig') {

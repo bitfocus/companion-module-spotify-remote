@@ -1,6 +1,6 @@
 import { SpotifyInstanceBase } from './types'
 import { CompanionActions, CompanionAction } from '../../../instance_skel_types'
-import { ChangeVolume } from './actions2'
+import { ChangePlayState, ChangeRepeatState, ChangeVolume, PreviousSong, SkipSong } from './helpers'
 
 export enum ActionId {
 	PlayPause = 'play/pause',
@@ -34,14 +34,14 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			label: 'Toggle Play/Pause',
 			options: [],
 			callback: () => {
-				throw new Error('TODO')
+				executeAction(async (instance, deviceId) => ChangePlayState(instance, deviceId, 'toggle'))
 			},
 		},
 		[ActionId.Play]: {
 			label: 'Play',
 			options: [],
 			callback: () => {
-				throw new Error('TODO')
+				executeAction(async (instance, deviceId) => ChangePlayState(instance, deviceId, 'play'))
 			},
 		},
 		[ActionId.PlaySpecificList]: {
@@ -100,7 +100,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			label: 'Pause Playback',
 			options: [],
 			callback: () => {
-				throw new Error('TODO')
+				executeAction(async (instance, deviceId) => ChangePlayState(instance, deviceId, 'pause'))
 			},
 		},
 		[ActionId.VolumeUp]: {
@@ -178,14 +178,14 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			label: 'Skip Track',
 			options: [],
 			callback: () => {
-				throw new Error('TODO')
+				executeAction(async (instance, deviceId) => SkipSong(instance, deviceId))
 			},
 		},
 		[ActionId.Previous]: {
 			label: 'Previous Track',
 			options: [],
 			callback: () => {
-				throw new Error('TODO')
+				executeAction(async (instance, deviceId) => PreviousSong(instance, deviceId))
 			},
 		},
 		[ActionId.ShuffleToggle]: {
@@ -233,8 +233,11 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					],
 				},
 			],
-			callback: () => {
-				throw new Error('TODO')
+			callback: (action) => {
+				if (typeof action.options.state === 'string') {
+					const target = action.options.state as any // TODO - typings
+					executeAction(async (instance, deviceId) => ChangeRepeatState(instance, deviceId, target))
+				}
 			},
 		},
 		[ActionId.ActiveDeviceToConfig]: {
