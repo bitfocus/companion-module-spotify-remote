@@ -3,10 +3,11 @@ import SpotifyWebApi = require('spotify-web-api-node')
 import { GetConfigFields, DeviceConfig } from './config'
 import { FeedbackId, GetFeedbacksList } from './feedback'
 import { GetActionsList } from './actions'
-import { CompanionSystem } from '../../../instance_skel_types'
+import { CompanionStaticUpgradeScript, CompanionSystem } from '../../../instance_skel_types'
 import PQueue from 'p-queue'
 import { SpotifyPlaybackState, SpotifyState } from './state'
 import { SpotifyInstanceBase } from './types'
+import { BooleanFeedbackUpgradeMap } from './upgrades'
 
 const scopes = [
 	'user-read-playback-state',
@@ -35,6 +36,14 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 			playbackState: null,
 		}
 	}
+
+	static GetUpgradeScripts(): CompanionStaticUpgradeScript[] {
+		return [
+			// Upgrade feedbacks to boolean type
+			SpotifyInstance.CreateConvertToBooleanFeedbackUpgradeScript(BooleanFeedbackUpgradeMap),
+		]
+	}
+
 	public async checkIfApiErrorShouldRetry(err: any): Promise<boolean> {
 		// Error Code 401 represents out of date token
 		if ('statusCode' in err && err.statusCode == '401') {
