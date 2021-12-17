@@ -1,5 +1,6 @@
+import { SpotifyInstanceBase } from './types'
 import { CompanionActions, CompanionAction } from '../../../instance_skel_types'
-// import { SpotifyState } from './state'
+import { ChangeVolume } from './actions2'
 
 export enum ActionId {
 	PlayPause = 'play/pause',
@@ -23,7 +24,9 @@ export enum ActionId {
 
 type CompanionActionWithCallback = CompanionAction & Required<Pick<CompanionAction, 'callback'>>
 
-export function GetActionsList(): CompanionActions {
+type DoAction = (instance: SpotifyInstanceBase, deviceId: string) => Promise<void>
+
+export function GetActionsList(executeAction: (fcn: DoAction) => void): CompanionActions {
 	// getState: () => SpotifyState
 	// const initialState = getState()
 	const actions: { [id in ActionId]: CompanionActionWithCallback | undefined } = {
@@ -104,42 +107,57 @@ export function GetActionsList(): CompanionActions {
 			label: 'Volume Up',
 			options: [
 				{
-					type: 'textinput',
+					type: 'number',
 					label: 'Volume',
 					id: 'volumeUpAmount',
-					default: '5',
+					default: 5,
+					min: 0,
+					max: 100,
+					step: 1,
 				},
 			],
-			callback: () => {
-				throw new Error('TODO')
+			callback: (action) => {
+				executeAction(async (instance, deviceId) =>
+					ChangeVolume(instance, deviceId, false, Number(action.options.volumeUpAmount))
+				)
 			},
 		},
 		[ActionId.VolumeDown]: {
 			label: 'Volume Down',
 			options: [
 				{
-					type: 'textinput',
+					type: 'number',
 					label: 'Volume',
 					id: 'volumeDownAmount',
-					default: '5',
+					default: 5,
+					min: 0,
+					max: 100,
+					step: 1,
 				},
 			],
-			callback: () => {
-				throw new Error('TODO')
+			callback: (action) => {
+				executeAction(async (instance, deviceId) =>
+					ChangeVolume(instance, deviceId, false, -Number(action.options.volumeDownAmount))
+				)
 			},
 		},
 		[ActionId.VolumeSpecific]: {
 			label: 'Set Volume to Specific Value',
 			options: [
 				{
-					type: 'textinput',
+					type: 'number',
 					label: 'Volume',
 					id: 'value',
-					default: '50',
+					default: 50,
+					min: 0,
+					max: 100,
+					step: 1,
 				},
 			],
-			callback: () => {
-				throw new Error('TODO')
+			callback: (action) => {
+				executeAction(async (instance, deviceId) =>
+					ChangeVolume(instance, deviceId, true, Number(action.options.value))
+				)
 			},
 		},
 		[ActionId.SeekPosition]: {

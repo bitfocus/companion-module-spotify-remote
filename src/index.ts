@@ -11,6 +11,7 @@ import { GetActionsList } from './actions'
 import { CompanionSystem } from '../../../instance_skel_types'
 import PQueue from 'p-queue'
 import { SpotifyPlaybackState, SpotifyState } from './state'
+import { SpotifyInstanceBase } from './types'
 
 const scopes = [
 	'user-read-playback-state',
@@ -25,8 +26,8 @@ const scopes = [
 	'user-read-playback-position',
 ]
 
-class SpotifyInstance extends InstanceSkel<DeviceConfig> {
-	private readonly spotifyApi = new SpotifyWebApi()
+class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInstanceBase {
+	public readonly spotifyApi = new SpotifyWebApi()
 	private pollTimer: NodeJS.Timeout | undefined
 
 	private readonly state: SpotifyState
@@ -39,12 +40,17 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> {
 			playbackState: null,
 		}
 	}
-	private async checkIfApiErrorShouldRetry(err: any) {
+	public async checkIfApiErrorShouldRetry(err: any): Promise<boolean> {
 		// Error Code 401 represents out of date token
 		if ('statusCode' in err && err.statusCode == '401') {
 			try {
 				const data = await this.spotifyApi.refreshAccessToken()
 				this.spotifyApi.setAccessToken(data.body['access_token'])
+
+				// Save the new token
+				this.config.accessToken = data.body.access_token
+				this.saveConfig()
+
 				return true
 			} catch (e: any) {
 				this.debug(`Failed to refresh access token: ${e.toString()}`)
@@ -257,61 +263,7 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> {
 	// 		}
 	// 	)
 	// }
-	// ChangeVolume(action, device, specific = false) {
-	// 	let self = this
-	// 	let availableDevices
-	// 	let currentVolume
-	// 	let volumeChangable = true
-	// 	self.spotifyApi.getMyDevices().then(
-	// 		function (data) {
-	// 			availableDevices = data.body.devices
 
-	// 			for (i = 0; i < availableDevices.length; i++) {
-	// 				if (availableDevices[i].id == device) {
-	// 					if (availableDevices[i].type == 'Tablet' || availableDevices[i].type == 'Phone') {
-	// 						volumeChangable = false
-	// 					}
-	// 					currentVolume = availableDevices[i].volume_percent
-	// 				}
-	// 			}
-	// 			if (volumeChangable && !specific) {
-	// 				if (action.action == 'volumeUp') {
-	// 					currentVolume = currentVolume - -action.options.volumeUpAmount //double negitive because JS things
-	// 					if (currentVolume > 100) {
-	// 						currentVolume = 100
-	// 					}
-	// 				} else {
-	// 					currentVolume = currentVolume - action.options.volumeDownAmount
-	// 					if (currentVolume < 0) {
-	// 						currentVolume = 0
-	// 					}
-	// 				}
-	// 			}
-
-	// 			if (specific) {
-	// 				currentVolume = action.options.value
-	// 			}
-
-	// 			self.spotifyApi
-	// 				.setVolume(currentVolume, {
-	// 					device_id: device,
-	// 				})
-	// 				.then(
-	// 					function () {},
-	// 					function (err) {
-	// 						self.checkIfApiErrorShouldRetry(err)
-	// 					}
-	// 				)
-	// 		},
-	// 		function (err) {
-	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 				if (retry) {
-	// 					self.ChangeVolume(action)
-	// 				}
-	// 			})
-	// 		}
-	// 	)
-	// }
 	// SkipSong() {
 	// 	let self = this
 	// 	self.spotifyApi.skipToNext().then(
@@ -461,7 +413,13 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> {
 		return GetConfigFields()
 	}
 	private initActions() {
-		const actions = GetActionsList()
+		const actions = GetActionsList((fcn) => {
+			if (this.config.deviceId && this.canPollOrPost()) {
+				fcn(this, this.config.deviceId).catch((e) => {
+					this.debug(`Failed to execute action: ${e.toString()}`)
+				})
+			}
+		})
 		this.setActions(actions)
 	}
 	// Set up Feedbacks
@@ -548,7 +506,7 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> {
 		this.setVariableDefinitions(variables)
 	}
 
-	private canPoll(): boolean {
+	private canPollOrPost(): boolean {
 		return !!(
 			this.spotifyApi.getClientId() &&
 			this.spotifyApi.getAccessToken() &&
@@ -558,15 +516,13 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> {
 	}
 	private queuePoll() {
 		// If everything is populated we can do the poll
-		if (this.canPoll()) {
-			this.status(this.STATUS_OK)
-
+		if (this.canPollOrPost()) {
 			if (this.pollQueue.size > 1) {
 				this.debug(`Poll queue overflow`)
 			} else {
 				this.pollQueue
 					.add(async () => {
-						if (this.canPoll()) {
+						if (this.canPollOrPost()) {
 							try {
 								await this.doPollPlaybackState()
 							} catch (e: any) {
@@ -634,7 +590,10 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> {
 
 			// Diff the state and inform companion of anything that changed
 			this.diffAndSavePlaybackState(newState)
+			this.status(this.STATUS_OK)
 		} catch (err) {
+			this.status(this.STATUS_ERROR, 'Failed to query Api')
+
 			const retry = await this.checkIfApiErrorShouldRetry(err)
 			if (retry) {
 				this.queuePoll()
@@ -747,14 +706,6 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> {
 
 	// 	if (action.action == 'repeatState') {
 	// 		self.ChangeRepeatState(action)
-	// 	}
-
-	// 	if (action.action == 'volumeUp' || action.action == 'volumeDown') {
-	// 		self.ChangeVolume(action, self.config.deviceId)
-	// 	}
-
-	// 	if (action.action == 'volumeSpecific') {
-	// 		self.ChangeVolume(action, self.config.deviceId, true)
 	// 	}
 
 	// 	if (action.action == 'seekPosition') {

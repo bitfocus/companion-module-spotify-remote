@@ -24,7 +24,7 @@ export interface SpotifyTrackInfo {
 }
 
 export interface SpotifyDeviceInfo {
-	volumePercent: number | null
 	id: string | null
 	name: string
+	volumePercent: number | null
 }
