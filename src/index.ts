@@ -3,11 +3,12 @@
 // Seek on transfer to fix skipping due to spotifty api being bad.
 // Separate polling of data from variable state update to allow smoother status updates
 
-var instance_skel = require('../../../instance_skel')
-var SpotifyWebApi = require('spotify-web-api-node')
-const { GetConfigFields } = require('./config')
-const { GetFeedbacksList } = require('./feedback')
-const { GetActionsList } = require('./actions')
+import InstanceSkel = require('../../../instance_skel')
+import SpotifyWebApi = require('spotify-web-api-node')
+import { GetConfigFields, DeviceConfig } from './config'
+import { GetFeedbacksList } from './feedback'
+import { GetActionsList } from './actions'
+import { CompanionSystem } from '../../../instance_skel_types'
 
 const scopes = [
 	'user-read-playback-state',
@@ -22,17 +23,13 @@ const scopes = [
 	'user-read-playback-position',
 ]
 
-class instance extends instance_skel {
-	constructor(system, id, config) {
+class SpotifyInstance extends InstanceSkel<DeviceConfig> {
+	private spotifyApi: SpotifyWebApi | undefined
+	constructor(system: CompanionSystem, id: string, config: DeviceConfig) {
 		super(system, id, config)
-
-		var self = this
-		self.spotifyApi = null
-
-		return self
 	}
 	errorCheck(err) {
-		var self = this
+		let self = this
 		//Error Code 401 represents out of date token
 		if (err.statusCode == '401') {
 			return self.spotifyApi.refreshAccessToken().then(
@@ -51,7 +48,7 @@ class instance extends instance_skel {
 		}
 	}
 	ChangePlayState(action, device) {
-		var self = this
+		let self = this
 		self.spotifyApi.getMyCurrentPlaybackState().then(
 			function (data) {
 				// Output items
@@ -93,7 +90,7 @@ class instance extends instance_skel {
 		)
 	}
 	PlaySpecific(action, device) {
-		var self = this
+		let self = this
 
 		let params = {
 			device_id: device,
@@ -157,7 +154,7 @@ class instance extends instance_skel {
 		)
 	}
 	ChangeShuffleState(action) {
-		var self = this
+		let self = this
 		self.spotifyApi.getMyCurrentPlaybackState().then(
 			function (data) {
 				if (data.body && data.body.shuffle_state) {
@@ -202,10 +199,10 @@ class instance extends instance_skel {
 		)
 	}
 	ChangeRepeatState(action) {
-		var self = this
+		let self = this
 		self.spotifyApi.getMyCurrentPlaybackState().then(
 			function (data) {
-				var currentState = data.body.repeat_state
+				let currentState = data.body.repeat_state
 
 				if (action.options.state == currentState) {
 					console.log('Selected repeat state is already current')
@@ -235,8 +232,8 @@ class instance extends instance_skel {
 		)
 	}
 	SeekPosition(action) {
-		var self = this
-		var ms = action.options.position
+		let self = this
+		let ms = action.options.position
 
 		self.spotifyApi.seek(ms).then(
 			function () {
@@ -252,10 +249,10 @@ class instance extends instance_skel {
 		)
 	}
 	ChangeVolume(action, device, specific = false) {
-		var self = this
-		var availableDevices
-		var currentVolume
-		var volumeChangable = true
+		let self = this
+		let availableDevices
+		let currentVolume
+		let volumeChangable = true
 		self.spotifyApi.getMyDevices().then(
 			function (data) {
 				availableDevices = data.body.devices
@@ -307,7 +304,7 @@ class instance extends instance_skel {
 		)
 	}
 	SkipSong() {
-		var self = this
+		let self = this
 		self.spotifyApi.skipToNext().then(
 			function () {},
 			function (err) {
@@ -320,7 +317,7 @@ class instance extends instance_skel {
 		)
 	}
 	PreviousSong() {
-		var self = this
+		let self = this
 		self.spotifyApi.skipToPrevious().then(
 			function () {},
 			function (err) {
@@ -333,7 +330,7 @@ class instance extends instance_skel {
 		)
 	}
 	TransferPlayback(id) {
-		var self = this
+		let self = this
 		id = [id]
 		self.spotifyApi
 			.transferMyPlayback(id, {
@@ -353,7 +350,7 @@ class instance extends instance_skel {
 			)
 	}
 	PollPlaybackState() {
-		var self = this
+		let self = this
 		self.spotifyApi.getMyCurrentPlaybackState().then(
 			function (data) {
 				if (data.body) {
@@ -389,14 +386,14 @@ class instance extends instance_skel {
 					self.checkFeedbacks('current-context')
 				}
 
-				var songProgress = 0
-				var songDuration = 0
-				var songPercentage = 0
-				var timeRemaining = 0
-				var songName = ''
-				var albumName = ''
-				var artistName = ''
-				var albumArt = ''
+				let songProgress = 0
+				let songDuration = 0
+				let songPercentage = 0
+				let timeRemaining = 0
+				let songName = ''
+				let albumName = ''
+				let artistName = ''
+				let albumArt = ''
 
 				if (data.body.item) {
 					songProgress = data.body.progress_ms
@@ -423,12 +420,12 @@ class instance extends instance_skel {
 					timeRemaining = new Date(0).toISOString().substr(11, 8)
 				}
 
-				var timeRemainingSplit = timeRemaining.split(':')
-				var hoursRemaining = timeRemainingSplit[0]
-				var minutesRemaining = timeRemainingSplit[1]
-				var secondsRemaining = timeRemainingSplit[2]
+				let timeRemainingSplit = timeRemaining.split(':')
+				let hoursRemaining = timeRemainingSplit[0]
+				let minutesRemaining = timeRemainingSplit[1]
+				let secondsRemaining = timeRemainingSplit[2]
 
-				var deviceVolume = 0
+				let deviceVolume = 0
 				if (data.body.device) {
 					deviceVolume = data.body.device.volume_percent
 					self.ActiveDevice = data.body.device.name
@@ -464,7 +461,7 @@ class instance extends instance_skel {
 		)
 	}
 	updateConfig(config) {
-		var self = this
+		let self = this
 
 		self.config = config
 		self.spotifyApi.setClientId(self.config.clientId)
@@ -506,7 +503,7 @@ class instance extends instance_skel {
 		self.initActions()
 	}
 	init() {
-		var self = this
+		let self = this
 
 		self.status(self.STATUS_WARNING, 'Configuring')
 
@@ -549,7 +546,7 @@ class instance extends instance_skel {
 		log = self.log
 	}
 	DoPoll() {
-		var self = this
+		let self = this
 
 		// If everything is populated we can do the poll
 		if (
@@ -566,7 +563,7 @@ class instance extends instance_skel {
 		}
 	}
 	StopTimer() {
-		var self = this
+		let self = this
 
 		if (self.Timer) {
 			clearInterval(self.Timer)
@@ -574,7 +571,7 @@ class instance extends instance_skel {
 		}
 	}
 	destroy() {
-		var self = this
+		let self = this
 		self.StopTimer()
 		this.debug('destroy')
 	}
@@ -582,100 +579,98 @@ class instance extends instance_skel {
 		return GetConfigFields()
 	}
 	initActions() {
-		var self = this
+		let self = this
 
 		const actions = GetActionsList(self)
 		self.setActions(actions)
 	}
 	// Set up Feedbacks
 	initFeedbacks() {
-		var self = this
+		let self = this
 
 		const feedbacks = GetFeedbacksList(this, () => this.state)
 		self.setFeedbackDefinitions(feedbacks)
 	}
 	initVariables() {
-		var self = this
+		const variables = [
+			{
+				name: 'songName',
+				label: 'Current Song Name',
+			},
+			{
+				name: 'albumName',
+				label: 'Current Album Name',
+			},
+			{
+				name: 'artistName',
+				label: 'Current Artist Name',
+			},
+			{
+				name: 'isPlaying',
+				label: 'Is Playback Active',
+			},
+			{
+				name: 'isPlayingIcon',
+				label: 'Playback Icon',
+			},
+			{
+				name: 'isShuffle',
+				label: 'Is Shuffle Enabled',
+			},
+			{
+				name: 'repeat',
+				label: 'Is Repeat Enabled',
+			},
+			{
+				name: 'currentContext',
+				label: 'Current Context ID',
+			},
+			{
+				name: 'songPercentage',
+				label: 'Percentage of the current song completed',
+			},
+			{
+				name: 'songProgressSeconds',
+				label: 'Progress of the current song in seconds',
+			},
+			{
+				name: 'songDurationSeconds',
+				label: 'Duration of the current song in seconds',
+			},
+			{
+				name: 'songTimeRemaining',
+				label: 'Time remaining in song (pretty formatted HH:MM:SS)',
+			},
+			{
+				name: 'songTimeRemainingHours',
+				label: 'Hours remaining in song (zero padded)',
+			},
+			{
+				name: 'songTimeRemainingMinutes',
+				label: 'Minutes remaining in song (zero padded)',
+			},
+			{
+				name: 'songTimeRemainingSeconds',
+				label: 'Seconds remaining in song (zero padded)',
+			},
+			{
+				name: 'volume',
+				label: 'Current Volume',
+			},
+			{
+				name: 'currentAlbumArt',
+				label: 'Currently playing album artwork',
+			},
+			{
+				name: 'deviceName',
+				label: 'Current device name',
+			},
+		]
 
-		var variables = []
-
-		variables.push({
-			name: 'songName',
-			label: 'Current Song Name',
-		})
-		variables.push({
-			name: 'albumName',
-			label: 'Current Album Name',
-		})
-		variables.push({
-			name: 'artistName',
-			label: 'Current Artist Name',
-		})
-		variables.push({
-			name: 'isPlaying',
-			label: 'Is Playback Active',
-		})
-		variables.push({
-			name: 'isPlayingIcon',
-			label: 'Playback Icon',
-		})
-		variables.push({
-			name: 'isShuffle',
-			label: 'Is Shuffle Enabled',
-		})
-		variables.push({
-			name: 'repeat',
-			label: 'Is Repeat Enabled',
-		})
-		variables.push({
-			name: 'currentContext',
-			label: 'Current Context ID',
-		})
-		variables.push({
-			name: 'songPercentage',
-			label: 'Percentage of the current song completed',
-		})
-		variables.push({
-			name: 'songProgressSeconds',
-			label: 'Progress of the current song in seconds',
-		})
-		variables.push({
-			name: 'songDurationSeconds',
-			label: 'Duration of the current song in seconds',
-		})
-		variables.push({
-			name: 'songTimeRemaining',
-			label: 'Time remaining in song (pretty formatted HH:MM:SS)',
-		})
-		variables.push({
-			name: 'songTimeRemainingHours',
-			label: 'Hours remaining in song (zero padded)',
-		})
-		variables.push({
-			name: 'songTimeRemainingMinutes',
-			label: 'Minutes remaining in song (zero padded)',
-		})
-		variables.push({
-			name: 'songTimeRemainingSeconds',
-			label: 'Seconds remaining in song (zero padded)',
-		})
-		variables.push({
-			name: 'volume',
-			label: 'Current Volume',
-		})
-		variables.push({
-			name: 'currentAlbumArt',
-			label: 'Currently playing album artwork',
-		})
-		variables.push({
-			name: 'deviceName',
-			label: 'Current device name',
-		})
-
-		self.setVariableDefinitions(variables)
+		this.setVariableDefinitions(variables)
 	}
 	action(action) {
-		var self = this
+		let self = this
 
 		if (action.action == 'play/pause' || action.action == 'play' || action.action == 'pause') {
 			self.ChangePlayState(action, self.config.deviceId)
@@ -717,7 +712,7 @@ class instance extends instance_skel {
 			self.spotifyApi.getMyDevices().then(
 				function (data) {
 					let availableDevices = data.body.devices
-					for (var i = 0; i < availableDevices.length; i++) {
+					for (let i = 0; i < availableDevices.length; i++) {
 						if (availableDevices[i].is_active) {
 							self.config.deviceId = availableDevices[i].id
 							self.saveConfig()
@@ -731,7 +726,7 @@ class instance extends instance_skel {
 		}
 
 		if (action.action == 'switchActiveDevice') {
-			var Id = action.options.deviceId
+			let Id = action.options.deviceId
 			self.config.deviceId = Id
 			self.saveConfig()
 			self.TransferPlayback(self.config.deviceId)
@@ -739,7 +734,4 @@ class instance extends instance_skel {
 	}
 }
 
-instance.prototype.Timer = undefined
-
-instance_skel.extendedBy(instance)
-exports = module.exports = instance
+export = SpotifyInstance
