@@ -497,6 +497,8 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 		const oldState = this.state.playbackState
 		this.state.playbackState = newState
 
+		// console.log('NEW STATE', JSON.stringify(newState))
+
 		// Collect updates for batch saving
 		const invalidatedFeedbacks: FeedbackId[] = []
 		const variableUpdates: { [variableId: string]: string | number | boolean | undefined } = {} // TODO - type of this
@@ -551,9 +553,9 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 			variableUpdates['songPercentage'] = durationMs > 0 ? ((progressMs / durationMs) * 100).toFixed(0) : '-'
 
 			const remainingTotalMs = Math.max(durationMs - progressMs, 0) // remaining clamped to >=0
-			const remainingSeconds = (remainingTotalMs / 1000) % 60
-			const remainingMins = (remainingTotalMs / (1000 * 60)) % 60
-			const remainingHours = remainingTotalMs / (1000 * 60 * 60)
+			const remainingSeconds = Math.floor((remainingTotalMs / 1000) % 60)
+			const remainingMins = Math.floor((remainingTotalMs / (1000 * 60)) % 60)
+			const remainingHours = Math.floor(remainingTotalMs / (1000 * 60 * 60))
 			const remainingStr = `${remainingHours.toString().padStart(2, '0')}:${remainingMins
 				.toString()
 				.padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
