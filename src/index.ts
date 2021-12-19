@@ -67,134 +67,6 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 		}
 	}
 
-	// PlaySpecific(action, device) {
-	// 	let self = this
-
-	// 	let params = {
-	// 		device_id: device,
-	// 	}
-
-	// 	if (action.action == 'playSpecificList') {
-	// 		params.context_uri = `spotify:${action.options.type}:${action.options.context_uri}`
-	// 	}
-
-	// 	if (action.action == 'playSpecificTracks') {
-	// 		let tracks = action.options.tracks.split(',')
-	// 		tracks = tracks.map((track) => 'spotify:track:' + track.trim())
-	// 		params.uris = tracks
-	// 	}
-
-	// 	self.spotifyApi.getMyCurrentPlaybackState().then(
-	// 		function (data) {
-	// 			if (data.body && data.body.context && data.body.context.uri === params.context_uri) {
-	// 				if (
-	// 					!action.options.behavior ||
-	// 					action.options.behavior == 'return' ||
-	// 					(action.options.behavior == 'resume' && data.body.is_playing)
-	// 				) {
-	// 					return this.log('warning', `Already playing that ${action.options.type}: ${action.options.context_uri}`)
-	// 				}
-
-	// 				if (action.options.behavior == 'resume') {
-	// 					return self.spotifyApi
-	// 						.play({
-	// 							device_id: device,
-	// 						})
-	// 						.then(
-	// 							function (res) {
-	// 								console.log('done')
-	// 								self.PollPlaybackState()
-	// 							},
-	// 							function (err) {
-	// 								console.log('Something went wrong!', err)
-	// 							}
-	// 						)
-	// 				}
-	// 			}
-
-	// 			self.spotifyApi.play(params).then(
-	// 				function (res) {
-	// 					console.log('done')
-	// 					self.PollPlaybackState()
-	// 				},
-	// 				function (err) {
-	// 					console.log('Something went wrong!', err)
-	// 				}
-	// 			)
-	// 		},
-	// 		function (err) {
-	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 				if (retry) {
-	// 					self.PlaySpecific(action)
-	// 				}
-	// 			})
-	// 		}
-	// 	)
-	// }
-	// ChangeShuffleState(action) {
-	// 	let self = this
-	// 	self.spotifyApi.getMyCurrentPlaybackState().then(
-	// 		function (data) {
-	// 			if (data.body && data.body.shuffle_state) {
-	// 				if (action.action == 'shuffleOff' || action.action == 'shuffleToggle') {
-	// 					self.spotifyApi.setShuffle(false).then(
-	// 						function () {
-	// 							self.PollPlaybackState()
-	// 						},
-	// 						function (err) {
-	// 							self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 								if (retry) {
-	// 									self.ChangeShuffleState(action)
-	// 								}
-	// 							})
-	// 						}
-	// 					)
-	// 				}
-	// 			} else {
-	// 				if (action.action == 'shuffleOn' || action.action == 'shuffleToggle') {
-	// 					self.spotifyApi.setShuffle(true).then(
-	// 						function () {
-	// 							self.PollPlaybackState()
-	// 						},
-	// 						function (err) {
-	// 							self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 								if (retry) {
-	// 									self.ChangeShuffleState(action)
-	// 								}
-	// 							})
-	// 						}
-	// 					)
-	// 				}
-	// 			}
-	// 		},
-	// 		function (err) {
-	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 				if (retry) {
-	// 					self.ChangeShuffleState(action)
-	// 				}
-	// 			})
-	// 		}
-	// 	)
-	// }
-
-	// SeekPosition(action) {
-	// 	let self = this
-	// 	let ms = action.options.position
-
-	// 	self.spotifyApi.seek(ms).then(
-	// 		function () {
-	// 			self.PollPlaybackState()
-	// 		},
-	// 		function (err) {
-	// 			self.checkIfApiErrorShouldRetry(err).then(function (retry) {
-	// 				if (retry) {
-	// 					self.SeekPosition(action)
-	// 				}
-	// 			})
-	// 		}
-	// 	)
-	// }
-
 	private applyConfigValues(config: DeviceConfig): void {
 		if (config.clientId) {
 			this.spotifyApi.setClientId(config.clientId)
@@ -498,55 +370,56 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 		this.state.playbackState = newState
 
 		// console.log('NEW STATE', JSON.stringify(newState))
+		const forceUpdate = !oldState && !!newState
 
 		// Collect updates for batch saving
 		const invalidatedFeedbacks: FeedbackId[] = []
 		const variableUpdates: { [variableId: string]: string | number | boolean | undefined } = {} // TODO - type of this
 
-		if (oldState?.isPlaying !== newState?.isPlaying) {
+		if (forceUpdate || oldState?.isPlaying !== newState?.isPlaying) {
 			variableUpdates['isPlaying'] = !!newState?.isPlaying
 			variableUpdates['isPlayingIcon'] = newState?.isPlaying ? '\u23F5' : '\u23F9'
 
 			invalidatedFeedbacks.push(FeedbackId.IsPlaying)
 		}
-		if (oldState?.isShuffle !== newState?.isShuffle) {
+		if (forceUpdate || oldState?.isShuffle !== newState?.isShuffle) {
 			invalidatedFeedbacks.push(FeedbackId.IsShuffle)
 			variableUpdates['isShuffle'] = !!newState?.isShuffle
 		}
-		if (oldState?.repeatState !== newState?.repeatState) {
+		if (forceUpdate || oldState?.repeatState !== newState?.repeatState) {
 			invalidatedFeedbacks.push(FeedbackId.IsRepeat)
 			variableUpdates['repeat'] = newState?.repeatState ?? 'off'
 		}
-		if (oldState?.currentContext !== newState?.currentContext) {
+		if (forceUpdate || oldState?.currentContext !== newState?.currentContext) {
 			this.checkFeedbacks('current-context')
 			variableUpdates['currentContext'] = newState?.currentContext ?? ''
 		}
 
 		// Track info
-		if (oldState?.trackInfo?.artistName !== newState?.trackInfo?.artistName) {
+		if (forceUpdate || oldState?.trackInfo?.artistName !== newState?.trackInfo?.artistName) {
 			variableUpdates['artistName'] = newState?.trackInfo?.artistName ?? ''
 		}
-		if (oldState?.trackInfo?.name !== newState?.trackInfo?.name) {
+		if (forceUpdate || oldState?.trackInfo?.name !== newState?.trackInfo?.name) {
 			variableUpdates['songName'] = newState?.trackInfo?.name ?? ''
 		}
-		if (oldState?.trackInfo?.albumName !== newState?.trackInfo?.albumName) {
+		if (forceUpdate || oldState?.trackInfo?.albumName !== newState?.trackInfo?.albumName) {
 			variableUpdates['albumName'] = newState?.trackInfo?.albumName ?? ''
 		}
-		if (oldState?.trackInfo?.albumImageUrl !== newState?.trackInfo?.albumImageUrl) {
+		if (forceUpdate || oldState?.trackInfo?.albumImageUrl !== newState?.trackInfo?.albumImageUrl) {
 			variableUpdates['currentAlbumArt'] = newState?.trackInfo?.albumImageUrl ?? ''
 		}
 
 		// Look for track progress/duration changes
 		let progressChanged = false
-		if (oldState?.trackProgressMs !== newState?.trackProgressMs) {
+		if (forceUpdate || oldState?.trackProgressMs !== newState?.trackProgressMs) {
 			progressChanged = true
 			variableUpdates['songProgressSeconds'] = ((newState?.trackProgressMs ?? 0) / 1000).toFixed(0)
 		}
-		if (oldState?.trackInfo?.durationMs !== newState?.trackInfo?.durationMs) {
+		if (forceUpdate || oldState?.trackInfo?.durationMs !== newState?.trackInfo?.durationMs) {
 			progressChanged = true
 			variableUpdates['songDurationSeconds'] = ((newState?.trackInfo?.durationMs ?? 0) / 1000).toFixed(0)
 		}
-		if (progressChanged) {
+		if (forceUpdate || progressChanged) {
 			const progressMs = newState?.trackProgressMs ?? 0
 			const durationMs = newState?.trackInfo?.durationMs ?? 0
 
@@ -567,10 +440,10 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 		}
 
 		// Device info
-		if (oldState?.deviceInfo?.volumePercent !== newState?.deviceInfo?.volumePercent) {
+		if (forceUpdate || oldState?.deviceInfo?.volumePercent !== newState?.deviceInfo?.volumePercent) {
 			variableUpdates['volume'] = newState?.deviceInfo?.volumePercent ?? '-'
 		}
-		if (oldState?.deviceInfo?.name !== newState?.deviceInfo?.name) {
+		if (forceUpdate || oldState?.deviceInfo?.name !== newState?.deviceInfo?.name) {
 			invalidatedFeedbacks.push(FeedbackId.ActiveDevice)
 			variableUpdates['deviceName'] = newState?.deviceInfo?.name ?? '-'
 		}
@@ -582,22 +455,6 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 
 	// action(action) {
 	// 	let self = this
-
-	// 	if (action.action == 'play/pause' || action.action == 'play' || action.action == 'pause') {
-	// 		self.ChangePlayState(action, self.config.deviceId)
-	// 	}
-
-	// 	if (action.action == 'playSpecificList' || action.action == 'playSpecificTracks') {
-	// 		self.PlaySpecific(action, self.config.deviceId)
-	// 	}
-
-	// 	if (action.action == 'shuffleToggle' || action.action == 'shuffleOn' || action.action == 'shuffleOff') {
-	// 		self.ChangeShuffleState(action)
-	// 	}
-
-	// 	if (action.action == 'seekPosition') {
-	// 		self.SeekPosition(action, self.config.position)
-	// 	}
 
 	// 	if (action.action == 'activeDeviceToConfig') {
 	// 		self.spotifyApi.getMyDevices().then(

@@ -113,3 +113,93 @@ export async function ChangeRepeatState(
 		}
 	}
 }
+
+export async function ChangeShuffleState(
+	instance: SpotifyInstanceBase,
+	deviceId: string,
+	target: boolean | 'toggle',
+	attempt = 0
+): Promise<void> {
+	try {
+		const data = await instance.spotifyApi.getMyCurrentPlaybackState()
+
+		if ((target === false || target === 'toggle') && data.body.shuffle_state) {
+			await instance.spotifyApi.setShuffle(false, { device_id: deviceId })
+		} else if ((target === true || target === 'toggle') && !data.body.shuffle_state) {
+			await instance.spotifyApi.setShuffle(true, { device_id: deviceId })
+		}
+	} catch (err) {
+		const retry = await instance.checkIfApiErrorShouldRetry(err)
+		if (retry && attempt <= MAX_ATTEMPTS) {
+			return ChangeShuffleState(instance, deviceId, target, attempt + 1)
+		}
+	}
+}
+
+export async function SeekPosition(
+	instance: SpotifyInstanceBase,
+	deviceId: string,
+	positionMs: number,
+	attempt = 0
+): Promise<void> {
+	try {
+		await instance.spotifyApi.seek(positionMs)
+	} catch (err) {
+		const retry = await instance.checkIfApiErrorShouldRetry(err)
+		if (retry && attempt <= MAX_ATTEMPTS) {
+			return SeekPosition(instance, deviceId, positionMs, attempt + 1)
+		}
+	}
+}
+
+export async function PlaySpecificList(
+	instance: SpotifyInstanceBase,
+	deviceId: string,
+	context_uri: string,
+	behavior: 'return' | 'resume' | 'force',
+	attempt = 0
+): Promise<void> {
+	try {
+		if (behavior !== 'force') {
+			const data = await instance.spotifyApi.getMyCurrentPlaybackState()
+			if (data.body && data.body.context && data.body.context.uri === context_uri) {
+				if (behavior == 'return' || (behavior == 'resume' && data.body.is_playing)) {
+					instance.log('warn', `Already playing that ${context_uri}`)
+				} else if (behavior == 'resume') {
+					await instance.spotifyApi.play({ device_id: deviceId })
+				}
+
+				return
+			}
+		}
+
+		await instance.spotifyApi.play({
+			device_id: deviceId,
+			context_uri: context_uri,
+		})
+	} catch (err) {
+		const retry = await instance.checkIfApiErrorShouldRetry(err)
+		if (retry && attempt <= MAX_ATTEMPTS) {
+			return PlaySpecificList(instance, deviceId, context_uri, behavior, attempt + 1)
+		}
+	}
+}
+
+export async function PlaySpecificTracks(
+	instance: SpotifyInstanceBase,
+	deviceId: string,
+	uris: string[],
+	attempt = 0
+): Promise<void> {
+	try {
+		await instance.spotifyApi.play({
+			device_id: deviceId,
+			uris: uris,
+		})
+	} catch (err) {
+		const retry = await instance.checkIfApiErrorShouldRetry(err)
+		if (retry && attempt <= MAX_ATTEMPTS) {
+			return PlaySpecificTracks(instance, deviceId, uris, attempt + 1)
+		}
+	}
+}

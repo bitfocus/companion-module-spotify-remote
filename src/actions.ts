@@ -1,6 +1,16 @@
 import { SpotifyInstanceBase } from './types'
 import { CompanionActions, CompanionAction } from '../../../instance_skel_types'
-import { ChangePlayState, ChangeRepeatState, ChangeVolume, PreviousSong, SkipSong } from './helpers'
+import {
+	ChangePlayState,
+	ChangeRepeatState,
+	ChangeShuffleState,
+	ChangeVolume,
+	PlaySpecificList,
+	PlaySpecificTracks,
+	PreviousSong,
+	SeekPosition,
+	SkipSong,
+} from './helpers'
 
 export enum ActionId {
 	PlayPause = 'play/pause',
@@ -77,8 +87,13 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					],
 				},
 			],
-			callback: () => {
-				throw new Error('TODO')
+			callback: (action) => {
+				if (action.options.type && action.options.context_uri && typeof action.options.behavior === 'string') {
+					const behavior = action.options.behavior as any // TODO - type
+					const context_uri = `spotify:${action.options.type}:${action.options.context_uri}`
+
+					executeAction(async (instance, deviceId) => PlaySpecificList(instance, deviceId, context_uri, behavior))
+				}
 			},
 		},
 		[ActionId.PlaySpecificTracks]: {
@@ -92,8 +107,12 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					tooltip: 'IDs should be comma separated (ie. 4ByEFOBuLXpCqvO1kw8Wdm,7BaEFOBuLXpDqvO1kw8Wem)',
 				},
 			],
-			callback: () => {
-				throw new Error('TODO')
+			callback: (action) => {
+				if (typeof action.options.tracks === 'string') {
+					const tracks = action.options.tracks.split(',').map((track) => 'spotify:track:' + track.trim())
+
+					executeAction(async (instance, deviceId) => PlaySpecificTracks(instance, deviceId, tracks))
+				}
 			},
 		},
 		[ActionId.Pause]: {
@@ -170,8 +189,11 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					default: '',
 				},
 			],
-			callback: () => {
-				throw new Error('TODO')
+			callback: (action) => {
+				if (typeof action.options.position === 'number') {
+					const positionMs = action.options.position
+					executeAction(async (instance, deviceId) => SeekPosition(instance, deviceId, positionMs))
+				}
 			},
 		},
 		[ActionId.Skip]: {
@@ -192,21 +214,21 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			label: 'Toggle Shuffle',
 			options: [],
 			callback: () => {
-				throw new Error('TODO')
+				executeAction(async (instance, deviceId) => ChangeShuffleState(instance, deviceId, 'toggle'))
 			},
 		},
 		[ActionId.ShuffleOn]: {
 			label: 'Turn Shuffle On',
 			options: [],
 			callback: () => {
-				throw new Error('TODO')
+				executeAction(async (instance, deviceId) => ChangeShuffleState(instance, deviceId, true))
 			},
 		},
 		[ActionId.ShuffleOff]: {
 			label: 'Turn Shuffle Off',
 			options: [],
 			callback: () => {
-				throw new Error('TODO')
+				executeAction(async (instance, deviceId) => ChangeShuffleState(instance, deviceId, false))
 			},
 		},
 		[ActionId.RepeatState]: {
