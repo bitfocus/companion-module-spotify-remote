@@ -5,10 +5,12 @@
 	"description": "",
 	"main": "dist/index.js",
 	"scripts": {
+		"prepare": "husky install",
 		"build": "npx rimraf dist && npx typescript@~4.5 -p tsconfig.build.json",
 		"build:main": "tsc -p tsconfig.build.json",
 		"build:watch": "tsc -p tsconfig.build.json --watch",
-		"lint": "eslint . --ext .ts --ext .js --ignore-pattern dist",
+		"lint:raw": "eslint --ext .ts --ext .js --ext .tsx --ext .jsx --ignore-pattern dist",
+		"lint": "yarn lint:raw .",
 		"lint-fix": "yarn lint --fix",
 		"license-validate": "yarn sofie-licensecheck",
 		"postinstall": "yarn build"
@@ -22,17 +24,12 @@
 	"product": "Web API and Controller",
 	"shortname": "Spotify",
 	"prettier": "@sofie-automation/code-standard-preset/.prettierrc.json",
-	"husky": {
-		"hooks": {
-			"pre-commit": "lint-staged"
-		}
-	},
 	"lint-staged": {
 		"*.{css,json,md,scss}": [
 			"prettier --write"
 		],
 		"*.{ts,tsx,js,jsx}": [
-			"yarn lint-fix"
+			"yarn lint:raw --fix"
 		]
 	},
 	"engines": {
@@ -46,7 +43,7 @@
 		"type-fest": "^2.8.0"
 	},
 	"devDependencies": {
-		"@sofie-automation/code-standard-preset": "^0.4.1",
+		"@sofie-automation/code-standard-preset": "^0.5.0",
 		"typescript": "~4.5"
 	}
 }
