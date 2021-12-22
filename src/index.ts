@@ -452,34 +452,6 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 		if (invalidatedFeedbacks.length > 0) this.checkFeedbacks(...invalidatedFeedbacks)
 		if (Object.keys(variableUpdates).length > 0) this.setVariables(variableUpdates as any)
 	}
-
-	// action(action) {
-	// 	let self = this
-
-	// 	if (action.action == 'activeDeviceToConfig') {
-	// 		self.spotifyApi.getMyDevices().then(
-	// 			function (data) {
-	// 				let availableDevices = data.body.devices
-	// 				for (let i = 0; i < availableDevices.length; i++) {
-	// 					if (availableDevices[i].is_active) {
-	// 						self.config.deviceId = availableDevices[i].id
-	// 						self.saveConfig()
-	// 					}
-	// 				}
-	// 			},
-	// 			function (err) {
-	// 				console.log('Something went wrong!', err)
-	// 			}
-	// 		)
-	// 	}
-
-	// 	if (action.action == 'switchActiveDevice') {
-	// 		let Id = action.options.deviceId
-	// 		self.config.deviceId = Id
-	// 		self.saveConfig()
-	// 		self.TransferPlayback(self.config.deviceId)
-	// 	}
-	// }
 }
 
 export = SpotifyInstance

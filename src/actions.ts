@@ -10,6 +10,7 @@ import {
 	PreviousSong,
 	SeekPosition,
 	SkipSong,
+	TransferPlayback,
 } from './helpers'
 
 export enum ActionId {
@@ -266,7 +267,18 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			label: 'Write the ID of the current Active Device to config',
 			options: [],
 			callback: () => {
-				throw new Error('TODO')
+				executeAction(async (instance) => {
+					const data = await instance.spotifyApi.getMyDevices()
+					const activeDevice = data.body.devices.find((d) => d.is_active)
+					if (activeDevice?.id) {
+						// Store the id
+						instance.config.deviceId = activeDevice.id
+						instance.saveConfig()
+
+						// Invalidate all feedbacks, some of them have probably changed
+						instance.checkFeedbacks()
+					}
+				})
 			},
 		},
 		[ActionId.SwitchActiveDevice]: {
@@ -279,8 +291,20 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					default: '',
 				},
 			],
-			callback: () => {
-				throw new Error('TODO')
+			callback: (action) => {
+				executeAction(async (instance) => {
+					const targetId = action.options.deviceId
+					if (targetId && typeof targetId === 'string') {
+						// Store the id
+						instance.config.deviceId = targetId
+						instance.saveConfig()
+
+						// Invalidate all feedbacks, some of them have probably changed
+						instance.checkFeedbacks()
+
+						await TransferPlayback(instance, targetId)
+					}
+				})
 			},
 		},
 	}
