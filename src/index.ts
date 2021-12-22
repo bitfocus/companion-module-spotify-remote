@@ -2,8 +2,8 @@ import InstanceSkel = require('../../../instance_skel')
 import SpotifyWebApi = require('spotify-web-api-node')
 import { GetConfigFields, DeviceConfig } from './config'
 import { FeedbackId, GetFeedbacksList } from './feedback'
-import { GetActionsList } from './actions'
-import { CompanionStaticUpgradeScript, CompanionSystem } from '../../../instance_skel_types'
+import { DoAction, GetActionsList } from './actions'
+import { CompanionStaticUpgradeScript, CompanionSystem, SomeCompanionConfigField } from '../../../instance_skel_types'
 import PQueue from 'p-queue'
 import { SpotifyPlaybackState, SpotifyState } from './state'
 import { SpotifyInstanceBase } from './types'
@@ -138,15 +138,16 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 
 		this.applyConfigValues(this.config)
 
-		this.spotifyApi.refreshAccessToken().then(
-			(data) => {
+		this.spotifyApi
+			.refreshAccessToken()
+			.then((data) => {
 				// Save the access token so that it's used in future calls
 				this.spotifyApi.setAccessToken(data.body['access_token'])
-			},
-			(err) => {
-				console.log('Could not refresh access token', err)
-			}
-		)
+			})
+			.catch((err) => {
+				this.debug(`Could not refresh access token`, err)
+				this.log('warn', `Failed to refresh access token: ${err.toString()}`)
+			})
 
 		if (!this.pollTimer) {
 			this.pollTimer = setInterval(() => this.queuePoll(), 250) // Check every 0.25 seconds
@@ -165,22 +166,26 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 			delete this.pollTimer
 		}
 	}
-	config_fields() {
+	config_fields(): SomeCompanionConfigField[] {
 		return GetConfigFields()
 	}
 	private initActions() {
-		const actions = GetActionsList((fcn) => {
-			if (this.config.deviceId && this.canPollOrPost()) {
-				fcn(this, this.config.deviceId)
+		const executeActionWrapper = (fcn: DoAction) => {
+			// Verify the api client is configured
+			if (this.canPollOrPost()) {
+				fcn(this, this.config.deviceId || null)
 					.then(() => {
-						// Do a poll asap
+						// Do a poll asap, to catch the changes
 						this.queuePoll()
 					})
 					.catch((e) => {
-						this.debug(`Failed to execute action: ${e.toString()}`)
+						this.debug(`Failed to execute action: ${e.toString()}`, e.stack)
+						this.log('error', `Execute action failed: ${e.toString()}`)
 					})
 			}
-		})
+		}
+
+		const actions = GetActionsList(executeActionWrapper)
 		this.setActions(actions)
 	}
 	// Set up Feedbacks

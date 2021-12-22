@@ -35,7 +35,7 @@ export enum ActionId {
 
 type CompanionActionWithCallback = CompanionAction & Required<Pick<CompanionAction, 'callback'>>
 
-type DoAction = (instance: SpotifyInstanceBase, deviceId: string) => Promise<void>
+export type DoAction = (instance: SpotifyInstanceBase, deviceId: string | null) => Promise<void>
 
 export function GetActionsList(executeAction: (fcn: DoAction) => void): CompanionActions {
 	// getState: () => SpotifyState
@@ -45,14 +45,18 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			label: 'Toggle Play/Pause',
 			options: [],
 			callback: () => {
-				executeAction(async (instance, deviceId) => ChangePlayState(instance, deviceId, 'toggle'))
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await ChangePlayState(instance, deviceId, 'toggle')
+				})
 			},
 		},
 		[ActionId.Play]: {
 			label: 'Play',
 			options: [],
 			callback: () => {
-				executeAction(async (instance, deviceId) => ChangePlayState(instance, deviceId, 'play'))
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await ChangePlayState(instance, deviceId, 'play')
+				})
 			},
 		},
 		[ActionId.PlaySpecificList]: {
@@ -93,7 +97,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					const behavior = action.options.behavior as any // TODO - type
 					const context_uri = `spotify:${action.options.type}:${action.options.context_uri}`
 
-					executeAction(async (instance, deviceId) => PlaySpecificList(instance, deviceId, context_uri, behavior))
+					executeAction(async (instance, deviceId) => {
+						if (deviceId) await PlaySpecificList(instance, deviceId, context_uri, behavior)
+					})
 				}
 			},
 		},
@@ -112,7 +118,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 				if (typeof action.options.tracks === 'string') {
 					const tracks = action.options.tracks.split(',').map((track) => 'spotify:track:' + track.trim())
 
-					executeAction(async (instance, deviceId) => PlaySpecificTracks(instance, deviceId, tracks))
+					executeAction(async (instance, deviceId) => {
+						if (deviceId) await PlaySpecificTracks(instance, deviceId, tracks)
+					})
 				}
 			},
 		},
@@ -120,7 +128,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			label: 'Pause Playback',
 			options: [],
 			callback: () => {
-				executeAction(async (instance, deviceId) => ChangePlayState(instance, deviceId, 'pause'))
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await ChangePlayState(instance, deviceId, 'pause')
+				})
 			},
 		},
 		[ActionId.VolumeUp]: {
@@ -137,9 +147,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 				},
 			],
 			callback: (action) => {
-				executeAction(async (instance, deviceId) =>
-					ChangeVolume(instance, deviceId, false, Number(action.options.volumeUpAmount))
-				)
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await ChangeVolume(instance, deviceId, false, Number(action.options.volumeUpAmount))
+				})
 			},
 		},
 		[ActionId.VolumeDown]: {
@@ -156,9 +166,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 				},
 			],
 			callback: (action) => {
-				executeAction(async (instance, deviceId) =>
-					ChangeVolume(instance, deviceId, false, -Number(action.options.volumeDownAmount))
-				)
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await ChangeVolume(instance, deviceId, false, -Number(action.options.volumeDownAmount))
+				})
 			},
 		},
 		[ActionId.VolumeSpecific]: {
@@ -175,9 +185,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 				},
 			],
 			callback: (action) => {
-				executeAction(async (instance, deviceId) =>
-					ChangeVolume(instance, deviceId, true, Number(action.options.value))
-				)
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await ChangeVolume(instance, deviceId, true, Number(action.options.value))
+				})
 			},
 		},
 		[ActionId.SeekPosition]: {
@@ -193,7 +203,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			callback: (action) => {
 				if (typeof action.options.position === 'number') {
 					const positionMs = action.options.position
-					executeAction(async (instance, deviceId) => SeekPosition(instance, deviceId, positionMs))
+					executeAction(async (instance, deviceId) => {
+						if (deviceId) await SeekPosition(instance, deviceId, positionMs)
+					})
 				}
 			},
 		},
@@ -201,35 +213,45 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			label: 'Skip Track',
 			options: [],
 			callback: () => {
-				executeAction(async (instance, deviceId) => SkipSong(instance, deviceId))
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await SkipSong(instance, deviceId)
+				})
 			},
 		},
 		[ActionId.Previous]: {
 			label: 'Previous Track',
 			options: [],
 			callback: () => {
-				executeAction(async (instance, deviceId) => PreviousSong(instance, deviceId))
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await PreviousSong(instance, deviceId)
+				})
 			},
 		},
 		[ActionId.ShuffleToggle]: {
 			label: 'Toggle Shuffle',
 			options: [],
 			callback: () => {
-				executeAction(async (instance, deviceId) => ChangeShuffleState(instance, deviceId, 'toggle'))
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await ChangeShuffleState(instance, deviceId, 'toggle')
+				})
 			},
 		},
 		[ActionId.ShuffleOn]: {
 			label: 'Turn Shuffle On',
 			options: [],
 			callback: () => {
-				executeAction(async (instance, deviceId) => ChangeShuffleState(instance, deviceId, true))
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await ChangeShuffleState(instance, deviceId, true)
+				})
 			},
 		},
 		[ActionId.ShuffleOff]: {
 			label: 'Turn Shuffle Off',
 			options: [],
 			callback: () => {
-				executeAction(async (instance, deviceId) => ChangeShuffleState(instance, deviceId, false))
+				executeAction(async (instance, deviceId) => {
+					if (deviceId) await ChangeShuffleState(instance, deviceId, false)
+				})
 			},
 		},
 		[ActionId.RepeatState]: {
@@ -259,7 +281,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			callback: (action) => {
 				if (typeof action.options.state === 'string') {
 					const target = action.options.state as any // TODO - typings
-					executeAction(async (instance, deviceId) => ChangeRepeatState(instance, deviceId, target))
+					executeAction(async (instance, deviceId) => {
+						if (deviceId) await ChangeRepeatState(instance, deviceId, target)
+					})
 				}
 			},
 		},

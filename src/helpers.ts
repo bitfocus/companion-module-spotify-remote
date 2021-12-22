@@ -34,6 +34,8 @@ export async function ChangeVolume(
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return ChangeVolume(instance, deviceId, absolute, volumeOrDelta, attempt + 1)
+		} else {
+			throw err
 		}
 	}
 }
@@ -45,6 +47,8 @@ export async function SkipSong(instance: SpotifyInstanceBase, deviceId: string, 
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return SkipSong(instance, deviceId, attempt + 1)
+		} else {
+			throw err
 		}
 	}
 }
@@ -55,6 +59,8 @@ export async function PreviousSong(instance: SpotifyInstanceBase, deviceId: stri
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return PreviousSong(instance, deviceId, attempt + 1)
+		} else {
+			throw err
 		}
 	}
 }
@@ -68,6 +74,8 @@ export async function TransferPlayback(instance: SpotifyInstanceBase, deviceId: 
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return TransferPlayback(instance, deviceId, attempt + 1)
+		} else {
+			throw err
 		}
 	}
 }
@@ -90,6 +98,8 @@ export async function ChangePlayState(
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return ChangePlayState(instance, deviceId, action, attempt + 1)
+		} else {
+			throw err
 		}
 	}
 }
@@ -110,6 +120,8 @@ export async function ChangeRepeatState(
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return ChangeRepeatState(instance, deviceId, target, attempt + 1)
+		} else {
+			throw err
 		}
 	}
 }
@@ -132,6 +144,8 @@ export async function ChangeShuffleState(
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return ChangeShuffleState(instance, deviceId, target, attempt + 1)
+		} else {
+			throw err
 		}
 	}
 }
@@ -148,6 +162,8 @@ export async function SeekPosition(
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return SeekPosition(instance, deviceId, positionMs, attempt + 1)
+		} else {
+			throw err
 		}
 	}
 }
@@ -181,6 +197,8 @@ export async function PlaySpecificList(
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return PlaySpecificList(instance, deviceId, context_uri, behavior, attempt + 1)
+		} else {
+			throw err
 		}
 	}
 }
@@ -200,6 +218,8 @@ export async function PlaySpecificTracks(
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return PlaySpecificTracks(instance, deviceId, uris, attempt + 1)
+		} else {
+			throw err
 		}
 	}
 }
