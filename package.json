@@ -1,20 +1,29 @@
 {
-  "name": "spotify-remote",
-  "version": "1.0.9",
-  "description": "",
-  "main": "module.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Peter Stather",
-  "license": "MIT",
-  "keywords": [
-    "Spotify"
-  ],
-  "manufacturer": "Spotify",
-  "product": "Web API and Controller",
-  "shortname": "Spotify",
-  "dependencies": {
-    "spotify-web-api-node": "^5.0.1"
-  }
+	"name": "spotify-remote",
+	"version": "1.0.9",
+	"description": "",
+	"main": "module.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "Peter Stather",
+	"license": "MIT",
+	"keywords": [
+		"Spotify"
+	],
+	"manufacturer": "Spotify",
+	"product": "Web API and Controller",
+	"shortname": "Spotify",
+	"dependencies": {
+		"spotify-web-api-node": "^5.0.1"
+	},
+	"homepage": "https://github.com/bitfocus/companion-module-spotify-remote#readme",
+	"bugs": {
+		"url": "https://github.com/bitfocus/companion-module-spotify-remote/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-spotify-remote.git"
+	},
+	"api_version": "1.0.0"
 }
