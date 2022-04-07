@@ -8,8 +8,11 @@ import PQueue from 'p-queue'
 import { SpotifyPlaybackState, SpotifyState } from './state'
 import { SpotifyInstanceBase } from './types'
 import { BooleanFeedbackUpgradeMap } from './upgrades'
+import { GenerateAuthorizeUrl, SpotifyAuth } from './api/auth'
+import { GetPlaybackState } from './api/playback'
+// import got from 'got'
 
-const scopes = [
+const AUTH_SCOPES = [
 	'user-read-playback-state',
 	'user-modify-playback-state',
 	'user-read-currently-playing',
@@ -23,6 +26,7 @@ const scopes = [
 ]
 
 class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInstanceBase {
+	public spotifyAuth: SpotifyAuth | undefined
 	public readonly spotifyApi = new SpotifyWebApi()
 	private pollTimer: NodeJS.Timeout | undefined
 
@@ -61,13 +65,24 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 				return false
 			}
 		} else {
-			this.debug(`Something went wrong with an API Call: ${err.toString()}`)
+			const errStr = 'error' in err ? err.error.toString() : err.toString()
+			this.debug(`Something went wrong with an API Call: ${errStr}`)
 			// TODO - log better
 			return false
 		}
 	}
 
 	private applyConfigValues(config: DeviceConfig): void {
+		if (config.clientId && config.clientSecret && config.redirectUri && config.accessToken && config.refreshToken) {
+			this.spotifyAuth = {
+				clientId: config.clientId,
+				clientSecret: config.clientSecret,
+				redirectUri: config.redirectUri,
+				accessToken: config.accessToken,
+				refreshToken: config.refreshToken,
+			}
+		}
+
 		if (config.clientId) {
 			this.spotifyApi.setClientId(config.clientId)
 		} else {
@@ -127,7 +142,12 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 			!this.config.accessToken &&
 			!this.config.code
 		) {
-			this.config.authURL = this.spotifyApi.createAuthorizeURL(scopes, '')
+			this.config.authURL = GenerateAuthorizeUrl(
+				this.config.clientId,
+				this.config.redirectUri,
+				AUTH_SCOPES,
+				''
+			).toString()
 			this.saveConfig()
 		}
 
@@ -150,7 +170,7 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 			})
 
 		if (!this.pollTimer) {
-			this.pollTimer = setInterval(() => this.queuePoll(), 250) // Check every 0.25 seconds
+			this.pollTimer = setInterval(() => this.queuePoll(), 1000) // Check every 0.25 seconds
 		}
 
 		this.initActions()
@@ -273,12 +293,7 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 	}
 
 	private canPollOrPost(): boolean {
-		return !!(
-			this.spotifyApi.getClientId() &&
-			this.spotifyApi.getAccessToken() &&
-			this.spotifyApi.getClientSecret() &&
-			this.spotifyApi.getRefreshToken()
-		)
+		return !!this.spotifyAuth
 	}
 	public queuePoll(): void {
 		// If everything is populated we can do the poll
@@ -306,8 +321,9 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 	}
 
 	private async doPollPlaybackState() {
+		if (!this.config.accessToken) return
 		try {
-			const data = await this.spotifyApi.getMyCurrentPlaybackState()
+			const data = await GetPlaybackState(this.config.accessToken)
 
 			// Transform the library state into a minimal state that we want to track
 			let newState: SpotifyPlaybackState | null = null
