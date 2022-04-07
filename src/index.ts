@@ -1,5 +1,4 @@
 import InstanceSkel = require('../../../instance_skel')
-import SpotifyWebApi = require('spotify-web-api-node')
 import { GetConfigFields, DeviceConfig } from './config'
 import { FeedbackId, GetFeedbacksList } from './feedback'
 import { DoAction, GetActionsList } from './actions'
@@ -11,7 +10,8 @@ import { BooleanFeedbackUpgradeMap } from './upgrades'
 import { authorizationCodeGrant, GenerateAuthorizeUrl, refreshAccessToken, SpotifyAuth } from './api/auth'
 import { getMyCurrentPlaybackState } from './api/playback'
 import { RequestOptionsBase } from './api/util'
-// import got from 'got'
+
+import 'spotify-api'
 
 const AUTH_SCOPES = [
 	'user-read-playback-state',
@@ -54,7 +54,8 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 		if ('statusCode' in err && err.statusCode == '401') {
 			if (!this.config.clientId || !this.config.clientSecret || !this.config.refreshToken) {
 				this.debug(`Missing properties required to refresh access token`)
-				// TODO - check config is valid
+
+				this.applyConfigValues()
 				return false
 			}
 			try {
@@ -64,26 +65,26 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 					this.config.accessToken = data.body.access_token
 					this.saveConfig()
 
-					// TODO - check config is valid
+					this.applyConfigValues()
 					return true
 				} else {
 					this.debug(`No access token in refresh response`)
 
 					// Clear the stale token
-					this.config.accessToken = ''
+					delete this.config.accessToken
 					this.saveConfig()
 
-					// TODO - check config is valid
+					this.applyConfigValues()
 					return false
 				}
 			} catch (e: any) {
 				this.debug(`Failed to refresh access token: ${e.toString()}`)
 
 				// Clear the stale token
-				this.config.accessToken = ''
+				delete this.config.accessToken
 				this.saveConfig()
 
-				// TODO - check config is valid
+				this.applyConfigValues()
 				return false
 			}
 		} else {
@@ -91,7 +92,7 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 			this.debug(`Something went wrong with an API Call: ${errStr}`)
 			// TODO - log better
 
-			// TODO - check config is valid
+			this.applyConfigValues()
 			return false
 		}
 	}
@@ -121,11 +122,13 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 				accessToken: this.config.accessToken,
 				refreshToken: this.config.refreshToken,
 			}
+
+			this.status(this.STATUS_OK)
 		} else {
 			this.spotifyAuth = undefined
-		}
 
-		// TODO - update device state
+			this.status(this.STATUS_ERROR, 'Missing required config fields')
+		}
 	}
 
 	updateConfig(config: DeviceConfig): void {
