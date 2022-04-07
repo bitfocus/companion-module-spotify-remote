@@ -8,8 +8,9 @@ import PQueue from 'p-queue'
 import { SpotifyPlaybackState, SpotifyState } from './state'
 import { SpotifyInstanceBase } from './types'
 import { BooleanFeedbackUpgradeMap } from './upgrades'
-import { GenerateAuthorizeUrl, SpotifyAuth } from './api/auth'
-import { GetPlaybackState } from './api/playback'
+import { authorizationCodeGrant, GenerateAuthorizeUrl, refreshAccessToken, SpotifyAuth } from './api/auth'
+import { getMyCurrentPlaybackState } from './api/playback'
+import { RequestOptionsBase } from './api/util'
 // import got from 'got'
 
 const AUTH_SCOPES = [
@@ -26,8 +27,8 @@ const AUTH_SCOPES = [
 ]
 
 class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInstanceBase {
-	public spotifyAuth: SpotifyAuth | undefined
-	public readonly spotifyApi = new SpotifyWebApi()
+	public spotifyAuth: SpotifyAuth | undefined // TODO - use this more
+
 	private pollTimer: NodeJS.Timeout | undefined
 
 	private readonly state: SpotifyState
@@ -51,85 +52,109 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 	public async checkIfApiErrorShouldRetry(err: any): Promise<boolean> {
 		// Error Code 401 represents out of date token
 		if ('statusCode' in err && err.statusCode == '401') {
+			if (!this.config.clientId || !this.config.clientSecret || !this.config.refreshToken) {
+				this.debug(`Missing properties required to refresh access token`)
+				// TODO - check config is valid
+				return false
+			}
 			try {
-				const data = await this.spotifyApi.refreshAccessToken()
-				this.spotifyApi.setAccessToken(data.body['access_token'])
+				const data = await refreshAccessToken(this.config.clientId, this.config.clientSecret, this.config.refreshToken)
+				if (data.body?.access_token) {
+					// Save the new token
+					this.config.accessToken = data.body.access_token
+					this.saveConfig()
 
-				// Save the new token
-				this.config.accessToken = data.body.access_token
-				this.saveConfig()
+					// TODO - check config is valid
+					return true
+				} else {
+					this.debug(`No access token in refresh response`)
 
-				return true
+					// Clear the stale token
+					this.config.accessToken = ''
+					this.saveConfig()
+
+					// TODO - check config is valid
+					return false
+				}
 			} catch (e: any) {
 				this.debug(`Failed to refresh access token: ${e.toString()}`)
+
+				// Clear the stale token
+				this.config.accessToken = ''
+				this.saveConfig()
+
+				// TODO - check config is valid
 				return false
 			}
 		} else {
 			const errStr = 'error' in err ? err.error.toString() : err.toString()
 			this.debug(`Something went wrong with an API Call: ${errStr}`)
 			// TODO - log better
+
+			// TODO - check config is valid
 			return false
 		}
 	}
 
-	private applyConfigValues(config: DeviceConfig): void {
-		if (config.clientId && config.clientSecret && config.redirectUri && config.accessToken && config.refreshToken) {
-			this.spotifyAuth = {
-				clientId: config.clientId,
-				clientSecret: config.clientSecret,
-				redirectUri: config.redirectUri,
-				accessToken: config.accessToken,
-				refreshToken: config.refreshToken,
+	public getRequestOptionsBase(): RequestOptionsBase | null {
+		if (this.config.accessToken) {
+			return {
+				accessToken: this.config.accessToken,
 			}
+		} else {
+			return null
+		}
+	}
+
+	private applyConfigValues(): void {
+		if (
+			this.config.clientId &&
+			this.config.clientSecret &&
+			this.config.redirectUri &&
+			this.config.accessToken &&
+			this.config.refreshToken
+		) {
+			this.spotifyAuth = {
+				clientId: this.config.clientId,
+				clientSecret: this.config.clientSecret,
+				redirectUri: this.config.redirectUri,
+				accessToken: this.config.accessToken,
+				refreshToken: this.config.refreshToken,
+			}
+		} else {
+			this.spotifyAuth = undefined
 		}
 
-		if (config.clientId) {
-			this.spotifyApi.setClientId(config.clientId)
-		} else {
-			this.spotifyApi.resetClientId()
-		}
-
-		if (config.clientSecret) {
-			this.spotifyApi.setClientSecret(config.clientSecret)
-		} else {
-			this.spotifyApi.resetClientSecret()
-		}
-
-		if (config.redirectUri) {
-			this.spotifyApi.setRedirectURI(config.redirectUri)
-		} else {
-			this.spotifyApi.resetRedirectURI()
-		}
-
-		if (config.accessToken) {
-			this.spotifyApi.setAccessToken(config.accessToken)
-		} else {
-			this.spotifyApi.resetAccessToken()
-		}
-
-		if (config.refreshToken) {
-			this.spotifyApi.setRefreshToken(config.refreshToken)
-		} else {
-			this.spotifyApi.resetRefreshToken()
-		}
+		// TODO - update device state
 	}
 
 	updateConfig(config: DeviceConfig): void {
 		this.config = config
 
-		this.applyConfigValues(config)
+		this.applyConfigValues()
 
-		if (this.config.code && !this.config.accessToken) {
-			this.spotifyApi
-				.authorizationCodeGrant(this.config.code)
+		if (
+			this.config.code &&
+			this.config.clientId &&
+			this.config.clientSecret &&
+			this.config.redirectUri &&
+			!this.config.accessToken
+		) {
+			authorizationCodeGrant(this.config.clientId, this.config.clientSecret, this.config.redirectUri, this.config.code)
 				.then((data) => {
-					this.config.accessToken = data.body['access_token']
-					this.config.refreshToken = data.body['refresh_token']
+					if (data.body?.access_token) {
+						this.config.accessToken = data.body.access_token
+					} else {
+						delete this.config.accessToken
+					}
+					if (data.body?.refresh_token) {
+						this.config.refreshToken = data.body.refresh_token
+					} else {
+						delete this.config.refreshToken
+					}
 					this.saveConfig()
 
-					// Set the access token on the API object to use it in later calls
-					this.spotifyApi.setAccessToken(data.body['access_token'])
-					this.spotifyApi.setRefreshToken(data.body['refresh_token'])
+					this.applyConfigValues()
 				})
 				.catch((err) => {
 					this.debug(`Failed to get access token: ${err.toString()}`)
@@ -156,18 +181,25 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 	init(): void {
 		this.status(this.STATUS_WARNING, 'Configuring')
 
-		this.applyConfigValues(this.config)
+		this.applyConfigValues()
 
-		this.spotifyApi
-			.refreshAccessToken()
-			.then((data) => {
-				// Save the access token so that it's used in future calls
-				this.spotifyApi.setAccessToken(data.body['access_token'])
-			})
-			.catch((err) => {
-				this.debug(`Could not refresh access token`, err)
-				this.log('warn', `Failed to refresh access token: ${err.toString()}`)
-			})
+		if (this.spotifyAuth) {
+			refreshAccessToken(this.spotifyAuth.clientId, this.spotifyAuth.clientSecret, this.spotifyAuth.refreshToken)
+				.then((data) => {
+					if (data.body?.access_token) {
+						// Save the access token so that it's used in future calls
+						this.config.accessToken = data.body.access_token
+					} else {
+						delete this.config.accessToken
+					}
+
+					this.applyConfigValues()
+				})
+				.catch((err) => {
+					this.debug(`Could not refresh access token`, err)
+					this.log('warn', `Failed to refresh access token: ${err.toString()}`)
+				})
+		}
 
 		if (!this.pollTimer) {
 			this.pollTimer = setInterval(() => this.queuePoll(), 1000) // Check every 0.25 seconds
@@ -321,9 +353,10 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 	}
 
 	private async doPollPlaybackState() {
-		if (!this.config.accessToken) return
+		const reqOptions = this.getRequestOptionsBase()
+		if (!reqOptions) return
 		try {
-			const data = await GetPlaybackState(this.config.accessToken)
+			const data = await getMyCurrentPlaybackState(reqOptions)
 
 			// Transform the library state into a minimal state that we want to track
 			let newState: SpotifyPlaybackState | null = null

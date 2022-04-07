@@ -12,6 +12,7 @@ import {
 	SkipSong,
 	TransferPlayback,
 } from './helpers'
+import { getMyDevices } from './api/device'
 
 export enum ActionId {
 	PlayPause = 'play/pause',
@@ -292,8 +293,11 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			options: [],
 			callback: () => {
 				executeAction(async (instance) => {
-					const data = await instance.spotifyApi.getMyDevices()
-					const activeDevice = data.body.devices.find((d) => d.is_active)
+					const reqOptions = instance.getRequestOptionsBase()
+					if (!reqOptions) return
+
+					const data = await getMyDevices(reqOptions)
+					const activeDevice = data.body?.devices?.find((d) => d.is_active)
 					if (activeDevice?.id) {
 						// Store the id
 						instance.config.deviceId = activeDevice.id

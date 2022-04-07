@@ -1,9 +1,72 @@
-import { CancelableRequest, HTTPError } from 'got'
+import got, { CancelableRequest, HTTPError } from 'got'
 import { IncomingHttpHeaders } from 'http'
 
 export const SpotifyBaseUrl = 'https://api.spotify.com'
 export const SpotifyAuthUrl = 'https://accounts.spotify.com/authorize'
 export const DefaultTimeout = 10000
+
+export async function doGetRequest<T>(reqOptions: RequestOptionsBase, pathname: string): Promise<Response<T>> {
+	return doRequest<T>(
+		got.get(SpotifyBaseUrl + pathname, {
+			headers: {
+				Authorization: `Bearer ${reqOptions.accessToken}`,
+				'Content-Type': 'application/json',
+			},
+			responseType: 'json',
+			timeout: {
+				request: DefaultTimeout,
+			},
+			hooks: {},
+		})
+	)
+}
+
+export type QueryParameters = Record<string, string | number | boolean | null | undefined>
+export type BodyParameters = Record<string, any>
+
+export async function doPutRequest<T>(
+	reqOptions: RequestOptionsBase,
+	pathname: string,
+	queryParams: QueryParameters,
+	body: BodyParameters
+): Promise<Response<T>> {
+	return doRequest<T>(
+		got.put(SpotifyBaseUrl + pathname, {
+			headers: {
+				Authorization: `Bearer ${reqOptions.accessToken}`,
+				'Content-Type': 'application/json',
+			},
+			responseType: 'json',
+			timeout: {
+				request: DefaultTimeout,
+			},
+			hooks: {},
+			searchParams: queryParams,
+			json: body,
+		})
+	)
+}
+
+export async function doPostRequest<T>(
+	reqOptions: RequestOptionsBase,
+	pathname: string,
+	queryParams: QueryParameters
+): Promise<Response<T>> {
+	return doRequest<T>(
+		got.post(SpotifyBaseUrl + pathname, {
+			headers: {
+				Authorization: `Bearer ${reqOptions.accessToken}`,
+				'Content-Type': 'application/json',
+			},
+			responseType: 'json',
+			timeout: {
+				request: DefaultTimeout,
+			},
+			hooks: {},
+			searchParams: queryParams,
+		})
+	)
+}
 
 export async function doRequest<T>(req: CancelableRequest<Response<T>>): Promise<Response<T>> {
 	try {
@@ -32,6 +95,10 @@ export async function doRequest<T>(req: CancelableRequest<Response<T>>): Promise
 	}
 }
 
+export interface RequestOptionsBase {
+	accessToken: string
+}
+
 export interface Response<T> {
 	body: T | null
 	headers: IncomingHttpHeaders
@@ -43,4 +110,8 @@ export interface ApiError {
 	statusCode: number
 	// message: any
 	error: Error
+}
+
+export interface DeviceOptions {
+	deviceId?: string
 }

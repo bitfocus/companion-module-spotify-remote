@@ -1,3 +1,15 @@
+import { getMyDevices, setVolume } from './api/device'
+import {
+	getMyCurrentPlaybackState,
+	pause,
+	play,
+	seek,
+	setRepeat,
+	setShuffle,
+	skipToNext,
+	skipToPrevious,
+	transferMyPlayback,
+} from './api/playback'
 import { SpotifyInstanceBase } from './types'
 
 // Limit the number of retries that we do
@@ -10,14 +22,17 @@ export async function ChangeVolume(
 	volumeOrDelta: number,
 	attempt = 0
 ): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
 	if (isNaN(volumeOrDelta)) {
 		instance.debug(`Invalid volume change: ${volumeOrDelta} isAbsolute=${absolute}`)
 		return
 	}
 
 	try {
-		const data = await instance.spotifyApi.getMyDevices()
-		const selectedDevice = data.body.devices.find((dev) => dev.id === deviceId)
+		const data = await getMyDevices(reqOptions)
+		const selectedDevice = data.body?.devices?.find((dev) => dev.id === deviceId)
 		// TODO - if dev.type == 'Tablet' || dev.type == 'Phone', then we can't do increments? or should that have been set the volume at all?
 
 		// Device doesn't look valid
@@ -27,9 +42,7 @@ export async function ChangeVolume(
 		if (newVolume < 0) newVolume = 0
 		if (newVolume > 100) newVolume = 100
 
-		await instance.spotifyApi.setVolume(newVolume, {
-			device_id: deviceId,
-		})
+		await setVolume(reqOptions, newVolume, { deviceId })
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
@@ -41,8 +54,11 @@ export async function ChangeVolume(
 }
 
 export async function SkipSong(instance: SpotifyInstanceBase, deviceId: string, attempt = 0): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
 	try {
-		await instance.spotifyApi.skipToNext({ device_id: deviceId })
+		await skipToNext(reqOptions, { deviceId })
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
@@ -53,8 +69,11 @@ export async function SkipSong(instance: SpotifyInstanceBase, deviceId: string, 
 	}
 }
 export async function PreviousSong(instance: SpotifyInstanceBase, deviceId: string, attempt = 0): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
 	try {
-		await instance.spotifyApi.skipToPrevious({ device_id: deviceId })
+		await skipToPrevious(reqOptions, { deviceId })
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
@@ -66,8 +85,11 @@ export async function PreviousSong(instance: SpotifyInstanceBase, deviceId: stri
 }
 
 export async function TransferPlayback(instance: SpotifyInstanceBase, deviceId: string, attempt = 0): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
 	try {
-		await instance.spotifyApi.transferMyPlayback([deviceId], {
+		await transferMyPlayback(reqOptions, [deviceId], {
 			play: true,
 		})
 	} catch (err) {
@@ -86,13 +108,16 @@ export async function ChangePlayState(
 	action: 'play' | 'pause' | 'toggle',
 	attempt = 0
 ): Promise<void> {
-	try {
-		const data = await instance.spotifyApi.getMyCurrentPlaybackState()
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
 
-		if ((action === 'pause' || action === 'toggle') && data.body.is_playing) {
-			await instance.spotifyApi.pause({ device_id: deviceId })
-		} else if ((action === 'play' || action === 'toggle') && !data.body.is_playing) {
-			await instance.spotifyApi.play({ device_id: deviceId })
+	try {
+		const data = await getMyCurrentPlaybackState(reqOptions)
+
+		if ((action === 'pause' || action === 'toggle') && data.body?.is_playing) {
+			await pause(reqOptions, { deviceId })
+		} else if ((action === 'play' || action === 'toggle') && !data.body?.is_playing) {
+			await play(reqOptions, { deviceId })
 		}
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
@@ -110,12 +135,15 @@ export async function ChangeRepeatState(
 	target: 'off' | 'track' | 'context',
 	attempt = 0
 ): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
 	try {
 		// Check if already in desired state
-		const data = await instance.spotifyApi.getMyCurrentPlaybackState()
-		if (data.body.repeat_state === target) return
+		const data = await getMyCurrentPlaybackState(reqOptions)
+		if (data.body?.repeat_state === target) return
 
-		await instance.spotifyApi.setRepeat(target)
+		await setRepeat(reqOptions, target)
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
@@ -132,13 +160,16 @@ export async function ChangeShuffleState(
 	target: boolean | 'toggle',
 	attempt = 0
 ): Promise<void> {
-	try {
-		const data = await instance.spotifyApi.getMyCurrentPlaybackState()
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
 
-		if ((target === false || target === 'toggle') && data.body.shuffle_state) {
-			await instance.spotifyApi.setShuffle(false, { device_id: deviceId })
-		} else if ((target === true || target === 'toggle') && !data.body.shuffle_state) {
-			await instance.spotifyApi.setShuffle(true, { device_id: deviceId })
+	try {
+		const data = await getMyCurrentPlaybackState(reqOptions)
+
+		if ((target === false || target === 'toggle') && data.body?.shuffle_state) {
+			await setShuffle(reqOptions, false, { deviceId })
+		} else if ((target === true || target === 'toggle') && !data.body?.shuffle_state) {
+			await setShuffle(reqOptions, true, { deviceId })
 		}
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
@@ -156,8 +187,11 @@ export async function SeekPosition(
 	positionMs: number,
 	attempt = 0
 ): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
 	try {
-		await instance.spotifyApi.seek(positionMs)
+		await seek(reqOptions, positionMs)
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
@@ -175,23 +209,26 @@ export async function PlaySpecificList(
 	behavior: 'return' | 'resume' | 'force',
 	attempt = 0
 ): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
 	try {
 		if (behavior !== 'force') {
-			const data = await instance.spotifyApi.getMyCurrentPlaybackState()
-			if (data.body && data.body.context && data.body.context.uri === context_uri) {
+			const data = await getMyCurrentPlaybackState(reqOptions)
+			if (data.body?.context?.uri === context_uri) {
 				if (behavior == 'return' || (behavior == 'resume' && data.body.is_playing)) {
 					instance.log('warn', `Already playing that ${context_uri}`)
 				} else if (behavior == 'resume') {
-					await instance.spotifyApi.play({ device_id: deviceId })
+					await play(reqOptions, { deviceId })
 				}
 
 				return
 			}
 		}
 
-		await instance.spotifyApi.play({
-			device_id: deviceId,
-			context_uri: context_uri,
+		await play(reqOptions, {
+			deviceId,
+			context_uri,
 		})
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
@@ -209,10 +246,13 @@ export async function PlaySpecificTracks(
 	uris: string[],
 	attempt = 0
 ): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
 	try {
-		await instance.spotifyApi.play({
-			device_id: deviceId,
-			uris: uris,
+		await play(reqOptions, {
+			deviceId,
+			uris,
 		})
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
