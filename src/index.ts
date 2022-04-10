@@ -1,3 +1,5 @@
+/// <reference types="spotify-api" />
+
 import InstanceSkel = require('../../../instance_skel')
 import { GetConfigFields, DeviceConfig } from './config'
 import { FeedbackId, GetFeedbacksList } from './feedback'
@@ -10,8 +12,6 @@ import { BooleanFeedbackUpgradeMap } from './upgrades'
 import { authorizationCodeGrant, GenerateAuthorizeUrl, refreshAccessToken, SpotifyAuth } from './api/auth'
 import { getMyCurrentPlaybackState } from './api/playback'
 import { RequestOptionsBase } from './api/util'
-
-import 'spotify-api'
 
 const AUTH_SCOPES = [
 	'user-read-playback-state',
