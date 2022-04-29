@@ -550,7 +550,7 @@ instance.prototype.init = function () {
 	)
 
 	if (self.Timer === undefined) {
-		self.Timer = setInterval(self.DoPoll.bind(self), 250) //Check every 0.25 seconds
+		self.Timer = setInterval(self.DoPoll.bind(self), 3000) //Check every 3 seconds. This leaves a bit of headroom before we hit the daily api limit
 	}
 
 	self.initFeedbacks()
