@@ -496,16 +496,16 @@ instance.prototype.updateConfig = function (config) {
 			}
 		)
 	}
-	if (
-		self.config.redirectUri &&
-		self.config.clientSecret &&
-		self.config.clientId &&
-		!self.config.accessToken &&
-		!self.config.code
-	) {
-		self.config.authURL = self.spotifyApi.createAuthorizeURL(scopes)
-		self.saveConfig()
+
+	if (self.config.baseUri) {
+		const newRedirectUri = `${self.config.baseUri}/instance/${self.id}/callback`
+		if (newRedirectUri !== self.config.redirectUri) {
+			self.config.redirectUri = newRedirectUri
+			self.spotifyApi.setRedirectURI(self.config.redirectUri)
+			self.saveConfig()
+		}
 	}
+
 	if (self.config.accessToken) {
 		self.spotifyApi.setAccessToken(self.config.accessToken)
 	}
@@ -514,6 +514,31 @@ instance.prototype.updateConfig = function (config) {
 	}
 
 	self.actions()
+}
+
+instance.prototype.handleHttpRequest = function (request) {
+	const self = this
+
+	if (request.path === '/callback') {
+		const code = request.query.code
+		if (!code) {
+			return {
+				body: 'Missing auth code',
+				status: 500,
+			}
+		}
+
+		self.config.code = code
+		self.updateConfig(self.config)
+
+		return {
+			body: 'Success!\nYou can close this tab',
+		}
+	} else {
+		return {
+			status: 404,
+		}
+	}
 }
 
 instance.prototype.init = function () {
@@ -594,7 +619,7 @@ instance.prototype.destroy = function () {
 
 instance.prototype.config_fields = function () {
 	var self = this
-	return [
+	const fields = [
 		{
 			type: 'text',
 			id: 'info',
@@ -616,9 +641,38 @@ instance.prototype.config_fields = function () {
 		},
 		{
 			type: 'textinput',
+			id: 'baseUri',
+			width: 12,
+			label: 'Base URL (eg http://localhost:8000)',
+		},
+		{
+			type: 'text',
 			id: 'redirectUri',
 			width: 12,
 			label: 'Redirect URL',
+			value: self.config.redirectUri,
+		},
+		self.config.redirectUri && self.config.clientSecret && self.config.clientId
+			? {
+					type: 'text',
+					id: 'auth link',
+					width: 12,
+					value: `<a href="${self.spotifyApi.createAuthorizeURL(scopes)}" target="_new">Authenticate</a>`,
+			  }
+			: null,
+		{
+			type: 'textinput',
+			id: 'deviceId',
+			width: 12,
+			label: 'Device ID',
+		},
+
+		{
+			type: 'text',
+			id: 'info',
+			width: 12,
+			label: 'ADVANCED FIELDS',
+			value: '<strong>You should not need to edit these.</strong>',
 		},
 		{
 			type: 'textinput',
@@ -638,19 +692,9 @@ instance.prototype.config_fields = function () {
 			width: 12,
 			label: 'Refresh Token',
 		},
-		{
-			type: 'textinput',
-			id: 'deviceId',
-			width: 12,
-			label: 'Device ID',
-		},
-		{
-			type: 'textinput',
-			id: 'authURL',
-			width: 12,
-			label: 'Auth URL',
-		},
 	]
+
+	return fields.filter((f) => !!f)
 }
 
 instance.prototype.actions = function (system) {
