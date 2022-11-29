@@ -1,29 +1,45 @@
 {
 	"name": "spotify-remote",
-	"version": "1.0.11",
-	"description": "",
-	"main": "module.js",
+	"version": "2.0.0-0",
+	"main": "dist/index.js",
+	"type": "module",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"prepare": "husky install",
+		"build": "rimraf dist && tsc -p tsconfig.build.json",
+		"build:main": "tsc -p tsconfig.build.json",
+		"dev": "tsc -p tsconfig.build.json --watch",
+		"lint:raw": "eslint --ext .ts --ext .js --ext .tsx --ext .jsx --ignore-pattern dist",
+		"lint": "yarn lint:raw .",
+		"lint-fix": "yarn lint --fix",
+		"license-validate": "yarn sofie-licensecheck"
 	},
 	"author": "Peter Stather",
 	"license": "MIT",
-	"keywords": [
-		"Spotify"
-	],
-	"manufacturer": "Spotify",
-	"product": "Web API and Controller",
-	"shortname": "Spotify",
+	"prettier": "@companion-module/tools/.prettierrc.json",
+	"lint-staged": {
+		"*.{css,json,md,scss}": [
+			"prettier --write"
+		],
+		"*.{ts,tsx,js,jsx}": [
+			"yarn lint:raw --fix"
+		]
+	},
+	"engines": {
+		"node": "^18.12"
+	},
 	"dependencies": {
-		"spotify-web-api-node": "^5.0.1"
+		"@companion-module/base": "~0.6.1",
+		"@types/node": "^18.11.9",
+		"@types/spotify-api": "^0.0.19",
+		"got": "^12.5.3",
+		"p-queue": "^7.3.0",
+		"type-fest": "^3.3.0"
 	},
-	"homepage": "https://github.com/bitfocus/companion-module-spotify-remote#readme",
-	"bugs": {
-		"url": "https://github.com/bitfocus/companion-module-spotify-remote/issues"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/bitfocus/companion-module-spotify-remote.git"
-	},
-	"api_version": "1.0.0"
+	"devDependencies": {
+		"@companion-module/tools": "^0.5.0",
+		"husky": "^8.0.2",
+		"lint-staged": "^13.0.4",
+		"rimraf": "^3.0.2",
+		"typescript": "~4.9"
+	}
 }

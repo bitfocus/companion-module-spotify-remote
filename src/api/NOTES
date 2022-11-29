@@ -1,0 +1,6 @@
+This 'api' folder is based on the library https://github.com/thelinmichael/spotify-web-api-node.
+
+A custom implementation is being used because of the lack of maintainance of the original library, and a pretty major issue of the library lacking timeouts.
+Rather than trying to fork and maintain a very JS style codebase, it makes more sense to implement our own from scratch, as apart from the authentication it is a very lightweight wrapper around a http library (superagent).
+
+The Typescript types from the library are still being used, to reduce the maintainance work as the typings change over time. To me, this is the most valuable part of the original library.
