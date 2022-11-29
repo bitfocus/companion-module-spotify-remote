@@ -1,0 +1,33 @@
+{
+	"id": "spotify-remote",
+	"name": "spotify-remote",
+	"shortname": "Spotify",
+	"description": "",
+	"version": "0.0.0",
+	"license": "MIT",
+	"repository": "https://github.com/bitfocus/companion-module-spotify-remote.git",
+	"bugs": "https://github.com/bitfocus/companion-module-spotify-remote/issues",
+	"maintainers": [
+		{
+			"name": "Peter Stather"
+		},
+		{
+			"name": "Julian Waller",
+			"email": "git@julusian.co.uk"
+		}
+	],
+	"legacyIds": [],
+	"runtime": {
+		"type": "node18",
+		"api": "nodejs-ipc",
+		"apiVersion": "0.0.0",
+		"entrypoint": "../dist/index.js"
+	},
+	"manufacturer": "Spotify",
+	"products": [
+		"Web API and Controller"
+	],
+	"keywords": [
+		"Spotify"
+	]
+}
