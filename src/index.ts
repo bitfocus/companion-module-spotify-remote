@@ -209,7 +209,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		}
 
 		if (!this.pollTimer) {
-			this.pollTimer = setInterval(() => this.queuePoll(), 1000) // Check every 0.25 seconds
+			this.pollTimer = setInterval(() => this.queuePoll(), 3000) // Check every 3 seconds. This leaves a bit of headroom before we hit the daily api limit
 		}
 
 		this.initActions()
