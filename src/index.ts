@@ -162,7 +162,6 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 					this.applyConfigValues()
 				})
 				.catch((err) => {
-					console.log(err)
 					this.log('debug', `Failed to get access token: ${err?.message ?? err.toString()}`)
 				})
 		}
@@ -185,7 +184,9 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		this.initActions()
 	}
 
-	async init(): Promise<void> {
+	async init(config: DeviceConfig): Promise<void> {
+		this.config = config
+
 		this.updateStatus(InstanceStatus.Connecting)
 
 		this.applyConfigValues()

@@ -2,12 +2,12 @@ import got, { CancelableRequest, HTTPError } from 'got'
 import { IncomingHttpHeaders } from 'http'
 
 export const SpotifyBaseUrl = 'https://api.spotify.com'
-export const SpotifyAuthUrl = 'https://accounts.spotify.com/authorize'
+export const SpotifyAuthUrl = 'https://accounts.spotify.com'
 export const DefaultTimeout = 10000
 
 export async function doGetRequest<T>(reqOptions: RequestOptionsBase, pathname: string): Promise<Response<T>> {
 	return doRequest<T>(
-		got.get(SpotifyBaseUrl + pathname, {
+		got.get<T>(SpotifyBaseUrl + pathname, {
 			headers: {
 				Authorization: `Bearer ${reqOptions.accessToken}`,
 				'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ export async function doPutRequest<T>(
 	body: BodyParameters
 ): Promise<Response<T>> {
 	return doRequest<T>(
-		got.put(SpotifyBaseUrl + pathname, {
+		got.put<T>(SpotifyBaseUrl + pathname, {
 			headers: {
 				Authorization: `Bearer ${reqOptions.accessToken}`,
 				'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ export async function doPostRequest<T>(
 	queryParams: QueryParameters
 ): Promise<Response<T>> {
 	return doRequest<T>(
-		got.post(SpotifyBaseUrl + pathname, {
+		got.post<T>(SpotifyBaseUrl + pathname, {
 			headers: {
 				Authorization: `Bearer ${reqOptions.accessToken}`,
 				'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ export async function doPostRequest<T>(
 
 export async function doRequest<T>(req: CancelableRequest<Response<T>>): Promise<Response<T>> {
 	try {
-		console.log('json', await req.json(), (await req.buffer()).length)
+		// console.log('json', await req.json(), (await req.buffer()).length)
 		const res = await req
 		// console.log(res.body)
 		return {

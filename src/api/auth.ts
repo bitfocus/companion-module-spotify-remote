@@ -1,6 +1,6 @@
 import got from 'got'
 import { URL } from 'url'
-import { DefaultTimeout, doRequest, SpotifyAuthUrl } from './util.js'
+import { DefaultTimeout, doRequest, Response, SpotifyAuthUrl } from './util.js'
 
 export interface SpotifyAuth {
 	clientId: string
@@ -16,7 +16,7 @@ export function GenerateAuthorizeUrl(
 	scopes: string[],
 	state: string | undefined
 ): URL {
-	const url = new URL(SpotifyAuthUrl)
+	const url = new URL(SpotifyAuthUrl + '/authorize')
 	url.searchParams.append('client_id', clientId)
 	url.searchParams.append('response_type', 'code')
 	url.searchParams.append('redirect_uri', redirectUri)
@@ -38,10 +38,14 @@ export interface RefreshAccessTokenResponse {
 	scope: string
 	token_type: string
 }
-export function refreshAccessToken(clientId: string, clientSecret: string, refreshToken: string) {
+export async function refreshAccessToken(
+	clientId: string,
+	clientSecret: string,
+	refreshToken: string
+): Promise<Response<RefreshAccessTokenResponse>> {
 	const authToken = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 	return doRequest<RefreshAccessTokenResponse>(
-		got.post(SpotifyAuthUrl + '/api/token', {
+		got.post<RefreshAccessTokenResponse>(SpotifyAuthUrl + '/api/token', {
 			headers: {
 				Authorization: `Basic ${authToken}`,
 				'Content-Type': 'application/x-www-form-urlencoded',
@@ -65,10 +69,17 @@ export interface AuthorizationCodeGrantResponse {
 	scope: string
 	token_type: string
 }
-export function authorizationCodeGrant(clientId: string, clientSecret: string, redirectURI: string, authCode: string) {
+export async function authorizationCodeGrant(
+	clientId: string,
+	clientSecret: string,
+	redirectURI: string,
+	authCode: string
+): Promise<Response<AuthorizationCodeGrantResponse>> {
+	const authToken = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 	return doRequest<AuthorizationCodeGrantResponse>(
-		got.post(SpotifyAuthUrl + '/api/token', {
+		got.post<AuthorizationCodeGrantResponse>(SpotifyAuthUrl + '/api/token', {
 			headers: {
+				Authorization: `Basic ${authToken}`,
 				'Content-Type': 'application/x-www-form-urlencoded',
 			},
 			responseType: 'json',
