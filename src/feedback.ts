@@ -1,5 +1,5 @@
 import { CompanionFeedbackDefinitions, CompanionFeedbackDefinition, combineRgb } from '@companion-module/base'
-import { SpotifyState } from './state'
+import { SpotifyState } from './state.js'
 
 export enum FeedbackId {
 	IsPlaying = 'is-playing',

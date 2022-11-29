@@ -1,4 +1,4 @@
-import { getMyDevices, setVolume } from './api/device'
+import { getMyDevices, setVolume } from './api/device.js'
 import {
 	getMyCurrentPlaybackState,
 	pause,
@@ -9,8 +9,8 @@ import {
 	skipToNext,
 	skipToPrevious,
 	transferMyPlayback,
-} from './api/playback'
-import { SpotifyInstanceBase } from './types'
+} from './api/playback.js'
+import { SpotifyInstanceBase } from './types.js'
 
 // Limit the number of retries that we do
 const MAX_ATTEMPTS = 5

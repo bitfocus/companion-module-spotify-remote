@@ -1,6 +1,6 @@
 import got from 'got'
 import { URL } from 'url'
-import { DefaultTimeout, doRequest, SpotifyAuthUrl } from './util'
+import { DefaultTimeout, doRequest, SpotifyAuthUrl } from './util.js'
 
 export interface SpotifyAuth {
 	clientId: string

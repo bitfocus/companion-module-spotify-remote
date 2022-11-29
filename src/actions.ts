@@ -1,5 +1,5 @@
-import { SpotifyInstanceBase } from './types'
 import { CompanionActionDefinitions, CompanionActionDefinition } from '@companion-module/base'
+import { SpotifyInstanceBase } from './types.js'
 import {
 	ChangePlayState,
 	ChangeRepeatState,
@@ -11,8 +11,8 @@ import {
 	SeekPosition,
 	SkipSong,
 	TransferPlayback,
-} from './helpers'
-import { getMyDevices } from './api/device'
+} from './helpers.js'
+import { getMyDevices } from './api/device.js'
 
 export enum ActionId {
 	PlayPause = 'play/pause',

@@ -1,4 +1,4 @@
-import { Response, doGetRequest, RequestOptionsBase, doPutRequest, QueryParameters, DeviceOptions } from './util'
+import { Response, doGetRequest, RequestOptionsBase, doPutRequest, QueryParameters, DeviceOptions } from './util.js'
 
 export async function getMyDevices(
 	reqOptions: RequestOptionsBase

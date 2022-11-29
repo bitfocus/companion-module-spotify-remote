@@ -1,6 +1,6 @@
-import { DeviceConfig } from './config'
-import { RequestOptionsBase } from './api/util'
 import { InstanceBase } from '@companion-module/base'
+import { DeviceConfig } from './config.js'
+import { RequestOptionsBase } from './api/util.js'
 
 export interface SpotifyInstanceBase extends InstanceBase<DeviceConfig> {
 	config: DeviceConfig

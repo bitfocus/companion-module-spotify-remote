@@ -7,7 +7,7 @@ import {
 	doPostRequest,
 	doPutRequest,
 	BodyParameters,
-} from './util'
+} from './util.js'
 
 export async function getMyCurrentPlaybackState(
 	reqOptions: RequestOptionsBase

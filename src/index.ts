@@ -1,8 +1,5 @@
 /// <reference types="spotify-api" />
 
-import { GetConfigFields, DeviceConfig } from './config.js'
-import { FeedbackId, GetFeedbacksList } from './feedback.js'
-import { DoAction, GetActionsList } from './actions.js'
 import {
 	CompanionVariableDefinition,
 	InstanceBase,
@@ -11,6 +8,9 @@ import {
 	SomeCompanionConfigField,
 } from '@companion-module/base'
 import PQueue from 'p-queue'
+import { GetConfigFields, DeviceConfig } from './config.js'
+import { FeedbackId, GetFeedbacksList } from './feedback.js'
+import { DoAction, GetActionsList } from './actions.js'
 import { SpotifyPlaybackState, SpotifyState } from './state.js'
 import { SpotifyInstanceBase } from './types.js'
 import { UpgradeScripts } from './upgrades.js'
@@ -162,7 +162,8 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 					this.applyConfigValues()
 				})
 				.catch((err) => {
-					this.log('debug', `Failed to get access token: ${err.toString()}`)
+					console.log(err)
+					this.log('debug', `Failed to get access token: ${err?.message ?? err.toString()}`)
 				})
 		}
 		if (

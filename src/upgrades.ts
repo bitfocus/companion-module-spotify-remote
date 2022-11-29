@@ -1,6 +1,6 @@
 import { CompanionStaticUpgradeScript, CreateConvertToBooleanFeedbackUpgradeScript } from '@companion-module/base'
-import { DeviceConfig } from './config'
-import { FeedbackId } from './feedback'
+import { DeviceConfig } from './config.js'
+import { FeedbackId } from './feedback.js'
 
 export const UpgradeScripts: CompanionStaticUpgradeScript<DeviceConfig>[] = [
 	// Upgrade feedbacks to boolean type
