@@ -26,7 +26,7 @@ export async function ChangeVolume(
 	if (!reqOptions) return
 
 	if (isNaN(volumeOrDelta)) {
-		instance.debug(`Invalid volume change: ${volumeOrDelta} isAbsolute=${absolute}`)
+		instance.log('debug', `Invalid volume change: ${volumeOrDelta} isAbsolute=${absolute}`)
 		return
 	}
 

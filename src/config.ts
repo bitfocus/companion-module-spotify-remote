@@ -1,4 +1,4 @@
-import { SomeCompanionConfigField } from '../../../instance_skel_types'
+import { SomeCompanionConfigField } from '@companion-module/base'
 
 export interface DeviceConfig {
 	clientId?: string
@@ -14,7 +14,7 @@ export interface DeviceConfig {
 export function GetConfigFields(): SomeCompanionConfigField[] {
 	return [
 		{
-			type: 'text',
+			type: 'static-text',
 			id: 'info',
 			width: 12,
 			label: 'Setup Information',

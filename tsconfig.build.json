@@ -1,5 +1,5 @@
 {
-	"extends": "./tsconfig.preset.json",
+	"extends": "@companion-module/tools/tsconfig/node18/recommended",
 	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules/**", "src/**/*spec.ts", "src/**/__tests__/*", "src/**/__mocks__/*"],
 	"compilerOptions": {
@@ -10,7 +10,6 @@
 			"{{PACKAGE-NAME}}": ["./src/index.ts"]
 		},
 		"types": ["node"],
-		"declaration": false,
-		"skipLibCheck": true
+		"module": "es2020"
 	}
 }

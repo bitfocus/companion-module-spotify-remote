@@ -1,5 +1,5 @@
 import { SpotifyInstanceBase } from './types'
-import { CompanionActions, CompanionAction } from '../../../instance_skel_types'
+import { CompanionActionDefinitions, CompanionActionDefinition } from '@companion-module/base'
 import {
 	ChangePlayState,
 	ChangeRepeatState,
@@ -34,16 +34,14 @@ export enum ActionId {
 	SwitchActiveDevice = 'switchActiveDevice',
 }
 
-type CompanionActionWithCallback = CompanionAction & Required<Pick<CompanionAction, 'callback'>>
-
 export type DoAction = (instance: SpotifyInstanceBase, deviceId: string | null) => Promise<void>
 
-export function GetActionsList(executeAction: (fcn: DoAction) => void): CompanionActions {
+export function GetActionsList(executeAction: (fcn: DoAction) => void): CompanionActionDefinitions {
 	// getState: () => SpotifyState
 	// const initialState = getState()
-	const actions: { [id in ActionId]: CompanionActionWithCallback | undefined } = {
+	const actions: { [id in ActionId]: CompanionActionDefinition | undefined } = {
 		[ActionId.PlayPause]: {
-			label: 'Toggle Play/Pause',
+			name: 'Toggle Play/Pause',
 			options: [],
 			callback: () => {
 				executeAction(async (instance, deviceId) => {
@@ -52,7 +50,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.Play]: {
-			label: 'Play',
+			name: 'Play',
 			options: [],
 			callback: () => {
 				executeAction(async (instance, deviceId) => {
@@ -61,7 +59,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.PlaySpecificList]: {
-			label: 'Start Specific Album / Artist / Playlist',
+			name: 'Start Specific Album / Artist / Playlist',
 			options: [
 				{
 					id: 'type',
@@ -105,7 +103,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.PlaySpecificTracks]: {
-			label: 'Start Specific Track(s)',
+			name: 'Start Specific Track(s)',
 			options: [
 				{
 					id: 'tracks',
@@ -126,7 +124,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.Pause]: {
-			label: 'Pause Playback',
+			name: 'Pause Playback',
 			options: [],
 			callback: () => {
 				executeAction(async (instance, deviceId) => {
@@ -135,7 +133,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.VolumeUp]: {
-			label: 'Volume Up',
+			name: 'Volume Up',
 			options: [
 				{
 					type: 'number',
@@ -154,7 +152,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.VolumeDown]: {
-			label: 'Volume Down',
+			name: 'Volume Down',
 			options: [
 				{
 					type: 'number',
@@ -173,7 +171,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.VolumeSpecific]: {
-			label: 'Set Volume to Specific Value',
+			name: 'Set Volume to Specific Value',
 			options: [
 				{
 					type: 'number',
@@ -192,7 +190,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.SeekPosition]: {
-			label: 'Seek To Position In Currently Playing Track',
+			name: 'Seek To Position In Currently Playing Track',
 			options: [
 				{
 					type: 'textinput',
@@ -211,7 +209,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.Skip]: {
-			label: 'Skip Track',
+			name: 'Skip Track',
 			options: [],
 			callback: () => {
 				executeAction(async (instance, deviceId) => {
@@ -220,7 +218,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.Previous]: {
-			label: 'Previous Track',
+			name: 'Previous Track',
 			options: [],
 			callback: () => {
 				executeAction(async (instance, deviceId) => {
@@ -229,7 +227,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.ShuffleToggle]: {
-			label: 'Toggle Shuffle',
+			name: 'Toggle Shuffle',
 			options: [],
 			callback: () => {
 				executeAction(async (instance, deviceId) => {
@@ -238,7 +236,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.ShuffleOn]: {
-			label: 'Turn Shuffle On',
+			name: 'Turn Shuffle On',
 			options: [],
 			callback: () => {
 				executeAction(async (instance, deviceId) => {
@@ -247,7 +245,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.ShuffleOff]: {
-			label: 'Turn Shuffle Off',
+			name: 'Turn Shuffle Off',
 			options: [],
 			callback: () => {
 				executeAction(async (instance, deviceId) => {
@@ -256,7 +254,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.RepeatState]: {
-			label: 'Set Repeat State',
+			name: 'Set Repeat State',
 			options: [
 				{
 					type: 'dropdown',
@@ -289,7 +287,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.ActiveDeviceToConfig]: {
-			label: 'Write the ID of the current Active Device to config',
+			name: 'Write the ID of the current Active Device to config',
 			options: [],
 			callback: () => {
 				executeAction(async (instance) => {
@@ -301,7 +299,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					if (activeDevice?.id) {
 						// Store the id
 						instance.config.deviceId = activeDevice.id
-						instance.saveConfig()
+						instance.saveConfig(instance.config)
 
 						// Invalidate all feedbacks, some of them have probably changed
 						instance.checkFeedbacks()
@@ -310,7 +308,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 			},
 		},
 		[ActionId.SwitchActiveDevice]: {
-			label: 'Change Active Device',
+			name: 'Change Active Device',
 			options: [
 				{
 					type: 'textinput',
@@ -325,7 +323,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					if (targetId && typeof targetId === 'string') {
 						// Store the id
 						instance.config.deviceId = targetId
-						instance.saveConfig()
+						instance.saveConfig(instance.config)
 
 						// Invalidate all feedbacks, some of them have probably changed
 						instance.checkFeedbacks()

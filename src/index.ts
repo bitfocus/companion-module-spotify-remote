@@ -1,17 +1,22 @@
 /// <reference types="spotify-api" />
 
-import InstanceSkel = require('../../../instance_skel')
-import { GetConfigFields, DeviceConfig } from './config'
-import { FeedbackId, GetFeedbacksList } from './feedback'
-import { DoAction, GetActionsList } from './actions'
-import { CompanionStaticUpgradeScript, CompanionSystem, SomeCompanionConfigField } from '../../../instance_skel_types'
+import { GetConfigFields, DeviceConfig } from './config.js'
+import { FeedbackId, GetFeedbacksList } from './feedback.js'
+import { DoAction, GetActionsList } from './actions.js'
+import {
+	CompanionVariableDefinition,
+	InstanceBase,
+	InstanceStatus,
+	runEntrypoint,
+	SomeCompanionConfigField,
+} from '@companion-module/base'
 import PQueue from 'p-queue'
-import { SpotifyPlaybackState, SpotifyState } from './state'
-import { SpotifyInstanceBase } from './types'
-import { BooleanFeedbackUpgradeMap } from './upgrades'
-import { authorizationCodeGrant, GenerateAuthorizeUrl, refreshAccessToken, SpotifyAuth } from './api/auth'
-import { getMyCurrentPlaybackState } from './api/playback'
-import { RequestOptionsBase } from './api/util'
+import { SpotifyPlaybackState, SpotifyState } from './state.js'
+import { SpotifyInstanceBase } from './types.js'
+import { UpgradeScripts } from './upgrades.js'
+import { authorizationCodeGrant, GenerateAuthorizeUrl, refreshAccessToken, SpotifyAuth } from './api/auth.js'
+import { getMyCurrentPlaybackState } from './api/playback.js'
+import { RequestOptionsBase } from './api/util.js'
 
 const AUTH_SCOPES = [
 	'user-read-playback-state',
@@ -26,34 +31,31 @@ const AUTH_SCOPES = [
 	'user-read-playback-position',
 ]
 
-class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInstanceBase {
+class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInstanceBase {
 	public spotifyAuth: SpotifyAuth | undefined // TODO - use this more
+
+	public config: DeviceConfig
 
 	private pollTimer: NodeJS.Timeout | undefined
 
 	private readonly state: SpotifyState
 	private readonly pollQueue = new PQueue({ concurrency: 1 })
 
-	constructor(system: CompanionSystem, id: string, config: DeviceConfig) {
-		super(system, id, config)
+	constructor(internal: unknown) {
+		super(internal)
 
 		this.state = {
 			playbackState: null,
 		}
-	}
 
-	static GetUpgradeScripts(): CompanionStaticUpgradeScript[] {
-		return [
-			// Upgrade feedbacks to boolean type
-			SpotifyInstance.CreateConvertToBooleanFeedbackUpgradeScript(BooleanFeedbackUpgradeMap),
-		]
+		this.config = {}
 	}
 
 	public async checkIfApiErrorShouldRetry(err: any): Promise<boolean> {
 		// Error Code 401 represents out of date token
 		if ('statusCode' in err && err.statusCode == '401') {
 			if (!this.config.clientId || !this.config.clientSecret || !this.config.refreshToken) {
-				this.debug(`Missing properties required to refresh access token`)
+				this.log('debug', `Missing properties required to refresh access token`)
 
 				this.applyConfigValues()
 				return false
@@ -63,33 +65,33 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 				if (data.body?.access_token) {
 					// Save the new token
 					this.config.accessToken = data.body.access_token
-					this.saveConfig()
+					this.saveConfig(this.config)
 
 					this.applyConfigValues()
 					return true
 				} else {
-					this.debug(`No access token in refresh response`)
+					this.log('debug', `No access token in refresh response`)
 
 					// Clear the stale token
 					delete this.config.accessToken
-					this.saveConfig()
+					this.saveConfig(this.config)
 
 					this.applyConfigValues()
 					return false
 				}
 			} catch (e: any) {
-				this.debug(`Failed to refresh access token: ${e.toString()}`)
+				this.log('debug', `Failed to refresh access token: ${e.toString()}`)
 
 				// Clear the stale token
 				delete this.config.accessToken
-				this.saveConfig()
+				this.saveConfig(this.config)
 
 				this.applyConfigValues()
 				return false
 			}
 		} else {
 			const errStr = 'error' in err ? err.error.toString() : err.toString()
-			this.debug(`Something went wrong with an API Call: ${errStr}`)
+			this.log('debug', `Something went wrong with an API Call: ${errStr}`)
 			// TODO - log better
 
 			this.applyConfigValues()
@@ -123,15 +125,15 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 				refreshToken: this.config.refreshToken,
 			}
 
-			this.status(this.STATUS_OK)
+			this.updateStatus(InstanceStatus.Ok)
 		} else {
 			this.spotifyAuth = undefined
 
-			this.status(this.STATUS_ERROR, 'Missing required config fields')
+			this.updateStatus(InstanceStatus.BadConfig)
 		}
 	}
 
-	updateConfig(config: DeviceConfig): void {
+	async configUpdated(config: DeviceConfig): Promise<void> {
 		this.config = config
 
 		this.applyConfigValues()
@@ -155,12 +157,12 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 					} else {
 						delete this.config.refreshToken
 					}
-					this.saveConfig()
+					this.saveConfig(this.config)
 
 					this.applyConfigValues()
 				})
 				.catch((err) => {
-					this.debug(`Failed to get access token: ${err.toString()}`)
+					this.log('debug', `Failed to get access token: ${err.toString()}`)
 				})
 		}
 		if (
@@ -176,13 +178,14 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 				AUTH_SCOPES,
 				''
 			).toString()
-			this.saveConfig()
+			this.saveConfig(this.config)
 		}
 
 		this.initActions()
 	}
-	init(): void {
-		this.status(this.STATUS_WARNING, 'Configuring')
+
+	async init(): Promise<void> {
+		this.updateStatus(InstanceStatus.Connecting)
 
 		this.applyConfigValues()
 
@@ -199,7 +202,6 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 					this.applyConfigValues()
 				})
 				.catch((err) => {
-					this.debug(`Could not refresh access token`, err)
 					this.log('warn', `Failed to refresh access token: ${err.toString()}`)
 				})
 		}
@@ -213,15 +215,15 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 		this.initVariables()
 	}
 
-	destroy(): void {
-		this.debug('destroy')
+	async destroy(): Promise<void> {
+		this.log('debug', 'destroy')
 
 		if (this.pollTimer) {
 			clearInterval(this.pollTimer)
 			delete this.pollTimer
 		}
 	}
-	config_fields(): SomeCompanionConfigField[] {
+	getConfigFields(): SomeCompanionConfigField[] {
 		return GetConfigFields()
 	}
 	private initActions() {
@@ -234,93 +236,92 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 						this.queuePoll()
 					})
 					.catch((e) => {
-						this.debug(`Failed to execute action: ${e.toString()}`, e.stack)
 						this.log('error', `Execute action failed: ${e.toString()}`)
 					})
 			}
 		}
 
 		const actions = GetActionsList(executeActionWrapper)
-		this.setActions(actions)
+		this.setActionDefinitions(actions)
 	}
 	// Set up Feedbacks
 	private initFeedbacks() {
-		const feedbacks = GetFeedbacksList(this, () => this.state)
+		const feedbacks = GetFeedbacksList(() => this.state)
 		this.setFeedbackDefinitions(feedbacks)
 	}
 	private initVariables() {
-		const variables = [
+		const variables: CompanionVariableDefinition[] = [
 			{
-				name: 'songName',
-				label: 'Current Song Name',
+				variableId: 'songName',
+				name: 'Current Song Name',
 			},
 			{
-				name: 'albumName',
-				label: 'Current Album Name',
+				variableId: 'albumName',
+				name: 'Current Album Name',
 			},
 			{
-				name: 'artistName',
-				label: 'Current Artist Name',
+				variableId: 'artistName',
+				name: 'Current Artist Name',
 			},
 			{
-				name: 'isPlaying',
-				label: 'Is Playback Active',
+				variableId: 'isPlaying',
+				name: 'Is Playback Active',
 			},
 			{
-				name: 'isPlayingIcon',
-				label: 'Playback Icon',
+				variableId: 'isPlayingIcon',
+				name: 'Playback Icon',
 			},
 			{
-				name: 'isShuffle',
-				label: 'Is Shuffle Enabled',
+				variableId: 'isShuffle',
+				name: 'Is Shuffle Enabled',
 			},
 			{
-				name: 'repeat',
-				label: 'Is Repeat Enabled',
+				variableId: 'repeat',
+				name: 'Is Repeat Enabled',
 			},
 			{
-				name: 'currentContext',
-				label: 'Current Context ID',
+				variableId: 'currentContext',
+				name: 'Current Context ID',
 			},
 			{
-				name: 'songPercentage',
-				label: 'Percentage of the current song completed',
+				variableId: 'songPercentage',
+				name: 'Percentage of the current song completed',
 			},
 			{
-				name: 'songProgressSeconds',
-				label: 'Progress of the current song in seconds',
+				variableId: 'songProgressSeconds',
+				name: 'Progress of the current song in seconds',
 			},
 			{
-				name: 'songDurationSeconds',
-				label: 'Duration of the current song in seconds',
+				variableId: 'songDurationSeconds',
+				name: 'Duration of the current song in seconds',
 			},
 			{
-				name: 'songTimeRemaining',
-				label: 'Time remaining in song (pretty formatted HH:MM:SS)',
+				variableId: 'songTimeRemaining',
+				name: 'Time remaining in song (pretty formatted HH:MM:SS)',
 			},
 			{
-				name: 'songTimeRemainingHours',
-				label: 'Hours remaining in song (zero padded)',
+				variableId: 'songTimeRemainingHours',
+				name: 'Hours remaining in song (zero padded)',
 			},
 			{
-				name: 'songTimeRemainingMinutes',
-				label: 'Minutes remaining in song (zero padded)',
+				variableId: 'songTimeRemainingMinutes',
+				name: 'Minutes remaining in song (zero padded)',
 			},
 			{
-				name: 'songTimeRemainingSeconds',
-				label: 'Seconds remaining in song (zero padded)',
+				variableId: 'songTimeRemainingSeconds',
+				name: 'Seconds remaining in song (zero padded)',
 			},
 			{
-				name: 'volume',
-				label: 'Current Volume',
+				variableId: 'volume',
+				name: 'Current Volume',
 			},
 			{
-				name: 'currentAlbumArt',
-				label: 'Currently playing album artwork',
+				variableId: 'currentAlbumArt',
+				name: 'Currently playing album artwork',
 			},
 			{
-				name: 'deviceName',
-				label: 'Current device name',
+				variableId: 'deviceName',
+				name: 'Current device name',
 			},
 		]
 
@@ -334,7 +335,7 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 		// If everything is populated we can do the poll
 		if (this.canPollOrPost()) {
 			if (this.pollQueue.size > 1) {
-				this.debug(`Poll queue overflow`)
+				this.log('debug', `Poll queue overflow`)
 			} else {
 				this.pollQueue
 					.add(async () => {
@@ -342,16 +343,16 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 							try {
 								await this.doPollPlaybackState()
 							} catch (e: any) {
-								this.debug(`Poll failed: ${e.toString()}`)
+								this.log('debug', `Poll failed: ${e.toString()}`)
 							}
 						}
 					})
 					.catch((e) => {
-						this.debug(`Failed to queue poll: ${e.toString()}`)
+						this.log('debug', `Failed to queue poll: ${e.toString()}`)
 					})
 			}
 		} else {
-			this.status(this.STATUS_ERROR, 'Missing required config fields')
+			this.updateStatus(InstanceStatus.BadConfig)
 		}
 	}
 
@@ -408,9 +409,9 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 
 			// Diff the state and inform companion of anything that changed
 			this.diffAndSavePlaybackState(newState)
-			this.status(this.STATUS_OK)
+			this.updateStatus(InstanceStatus.Ok)
 		} catch (err) {
-			this.status(this.STATUS_ERROR, 'Failed to query Api')
+			this.updateStatus(InstanceStatus.ConnectionFailure, 'Failed to query Api')
 
 			const retry = await this.checkIfApiErrorShouldRetry(err)
 			if (retry) {
@@ -507,8 +508,8 @@ class SpotifyInstance extends InstanceSkel<DeviceConfig> implements SpotifyInsta
 
 		// Inform companion of the state changes
 		if (invalidatedFeedbacks.length > 0) this.checkFeedbacks(...invalidatedFeedbacks)
-		if (Object.keys(variableUpdates).length > 0) this.setVariables(variableUpdates as any)
+		if (Object.keys(variableUpdates).length > 0) this.setVariableValues(variableUpdates)
 	}
 }
 
-export = SpotifyInstance
+runEntrypoint(SpotifyInstance, UpgradeScripts)

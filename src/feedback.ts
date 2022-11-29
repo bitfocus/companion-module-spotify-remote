@@ -1,7 +1,4 @@
-import { SetRequired } from 'type-fest'
-import InstanceSkel = require('../../../instance_skel')
-import { CompanionFeedbacks, CompanionFeedbackBoolean } from '../../../instance_skel_types'
-import { DeviceConfig } from './config'
+import { CompanionFeedbackDefinitions, CompanionFeedbackDefinition, combineRgb } from '@companion-module/base'
 import { SpotifyState } from './state'
 
 export enum FeedbackId {
@@ -12,40 +9,35 @@ export enum FeedbackId {
 	CurrentContext = 'current-context',
 }
 
-type CompanionFeedbackWithCallback = SetRequired<CompanionFeedbackBoolean, 'callback'>
-
-export function GetFeedbacksList(
-	instance: InstanceSkel<DeviceConfig>,
-	getState: () => SpotifyState
-): CompanionFeedbacks {
-	const feedbacks: { [id in FeedbackId]: CompanionFeedbackWithCallback | undefined } = {
+export function GetFeedbacksList(getState: () => SpotifyState): CompanionFeedbackDefinitions {
+	const feedbacks: { [id in FeedbackId]: CompanionFeedbackDefinition | undefined } = {
 		[FeedbackId.IsPlaying]: {
 			type: 'boolean',
-			label: 'Change button style if music is playing',
+			name: 'Change button style if music is playing',
 			description: 'If there is active playback, set the button to this colour',
 			options: [],
-			style: {
-				color: instance.rgb(255, 255, 255),
-				bgcolor: instance.rgb(0, 255, 0),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(0, 255, 0),
 			},
 			callback: (_feedback): boolean => !!getState().playbackState?.isPlaying,
 		},
 
 		[FeedbackId.IsShuffle]: {
 			type: 'boolean',
-			label: 'Change button style if shuffle is turned on',
+			name: 'Change button style if shuffle is turned on',
 			description: 'If shuffle is enabled, set the button to this colour',
 			options: [],
-			style: {
-				color: instance.rgb(255, 255, 255),
-				bgcolor: instance.rgb(0, 255, 0),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(0, 255, 0),
 			},
 			callback: (_feedback): boolean => !!getState().playbackState?.isShuffle,
 		},
 
 		[FeedbackId.IsRepeat]: {
 			type: 'boolean',
-			label: 'Change button style based on repeat state',
+			name: 'Change button style based on repeat state',
 			description: 'If repeat state matches given state change button colors',
 			options: [
 				{
@@ -69,16 +61,16 @@ export function GetFeedbacksList(
 					],
 				},
 			],
-			style: {
-				color: instance.rgb(255, 255, 255),
-				bgcolor: instance.rgb(0, 255, 0),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(0, 255, 0),
 			},
 			callback: (feedback): boolean => getState().playbackState?.repeatState == feedback.options.type,
 		},
 
 		[FeedbackId.ActiveDevice]: {
 			type: 'boolean',
-			label: 'Change button style if active device name matches value',
+			name: 'Change button style if active device name matches value',
 			description: 'If active device name matches value, change button color',
 			options: [
 				{
@@ -87,9 +79,9 @@ export function GetFeedbacksList(
 					id: 'device',
 				},
 			],
-			style: {
-				color: instance.rgb(255, 255, 255),
-				bgcolor: instance.rgb(0, 255, 0),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(0, 255, 0),
 			},
 			callback: (feedback): boolean =>
 				typeof feedback.options.device === 'string' &&
@@ -98,7 +90,7 @@ export function GetFeedbacksList(
 
 		[FeedbackId.CurrentContext]: {
 			type: 'boolean',
-			label: 'Change button style if current album/artist/playlist id matches value',
+			name: 'Change button style if current album/artist/playlist id matches value',
 			description: 'If active album/artist/playlist matches value, change button color',
 			options: [
 				{
@@ -107,9 +99,9 @@ export function GetFeedbacksList(
 					id: 'id',
 				},
 			],
-			style: {
-				color: instance.rgb(255, 255, 255),
-				bgcolor: instance.rgb(0, 255, 0),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(0, 255, 0),
 			},
 			callback: (feedback): boolean => getState().playbackState?.currentContext == feedback.options.id,
 		},

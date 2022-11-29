@@ -1,8 +1,10 @@
-import InstanceSkel = require('../../../instance_skel')
 import { DeviceConfig } from './config'
 import { RequestOptionsBase } from './api/util'
+import { InstanceBase } from '@companion-module/base'
 
-export interface SpotifyInstanceBase extends InstanceSkel<DeviceConfig> {
+export interface SpotifyInstanceBase extends InstanceBase<DeviceConfig> {
+	config: DeviceConfig
+
 	/**
 	 * Check if an error is because of an expired auth token
 	 * If so, the token will be renewed, and will return whether to retry the request
