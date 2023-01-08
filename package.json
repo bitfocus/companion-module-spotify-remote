@@ -28,7 +28,7 @@
 		"node": "^18.12"
 	},
 	"dependencies": {
-		"@companion-module/base": "~0.6.1",
+		"@companion-module/base": "~1.0.2",
 		"@types/node": "^18.11.9",
 		"@types/spotify-api": "^0.0.19",
 		"got": "^12.5.3",
@@ -36,7 +36,7 @@
 		"type-fest": "^3.3.0"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^0.5.0",
+		"@companion-module/tools": "^0.5.1",
 		"husky": "^8.0.2",
 		"lint-staged": "^13.0.4",
 		"rimraf": "^3.0.2",
