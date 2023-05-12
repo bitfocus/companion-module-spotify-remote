@@ -244,20 +244,22 @@ export async function PlaySpecificTracks(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
 	uris: string[],
-	attempt = 0
+	attempt = 0,
+	positionMs = 0
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
 
 	try {
 		await play(reqOptions, {
-			deviceId,
-			uris,
+			deviceId: deviceId,
+			uris: uris,
+			position_ms: positionMs,
 		})
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
-			return PlaySpecificTracks(instance, deviceId, uris, attempt + 1)
+			return PlaySpecificTracks(instance, deviceId, uris, attempt + 1, positionMs)
 		} else {
 			throw err
 		}
