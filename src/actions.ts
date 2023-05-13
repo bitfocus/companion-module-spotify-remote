@@ -112,13 +112,22 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					label: 'Input Specific Track IDs',
 					tooltip: 'IDs should be comma separated (ie. 4ByEFOBuLXpCqvO1kw8Wdm,7BaEFOBuLXpDqvO1kw8Wem)',
 				},
+				{
+					id: 'positionMs',
+					type: 'number',
+					label: 'Start Position of First Track in Milliseconds',
+					default: 0,
+					required: false,
+					min: 0,
+					max: 1000000,
+				},
 			],
 			callback: (action) => {
 				if (typeof action.options.tracks === 'string') {
 					const tracks = action.options.tracks.split(',').map((track) => 'spotify:track:' + track.trim())
 
 					executeAction(async (instance, deviceId) => {
-						if (deviceId) await PlaySpecificTracks(instance, deviceId, tracks)
+						if (deviceId) await PlaySpecificTracks(instance, deviceId, tracks, Number(action.options.positionMs) || 0)
 					})
 				}
 			},
