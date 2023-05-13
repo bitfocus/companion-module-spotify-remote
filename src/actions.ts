@@ -127,7 +127,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					const tracks = action.options.tracks.split(',').map((track) => 'spotify:track:' + track.trim())
 
 					executeAction(async (instance, deviceId) => {
-						if (deviceId) await PlaySpecificTracks(instance, deviceId, tracks, 0, Number(action.options.positionMs))
+						if (deviceId) await PlaySpecificTracks(instance, deviceId, tracks, Number(action.options.positionMs) || 0)
 					})
 				}
 			},
