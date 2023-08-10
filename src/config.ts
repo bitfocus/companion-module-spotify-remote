@@ -37,24 +37,13 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			id: 'redirectUri',
 			width: 12,
 			label: 'Redirect URL',
+			default: 'https://bitfocus.github.io/companion-oauth/callback',
 		},
 		{
 			type: 'textinput',
-			id: 'code',
+			id: 'authURL',
 			width: 12,
-			label: 'Approval Code',
-		},
-		{
-			type: 'textinput',
-			id: 'accessToken',
-			width: 12,
-			label: 'Access Token',
-		},
-		{
-			type: 'textinput',
-			id: 'refreshToken',
-			width: 12,
-			label: 'Refresh Token',
+			label: 'Auth URL',
 		},
 		{
 			type: 'textinput',
@@ -63,10 +52,32 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			label: 'Device ID',
 		},
 		{
-			type: 'textinput',
-			id: 'authURL',
+			type: 'checkbox',
+			id: 'managed_secrets',
 			width: 12,
-			label: 'Auth URL',
+			label: 'Show secrets',
+			default: false,
+		},
+		{
+			type: 'textinput',
+			id: 'code',
+			width: 12,
+			label: 'Approval Code',
+			isVisible: (options) => !!options.managed_secrets,
+		},
+		{
+			type: 'textinput',
+			id: 'accessToken',
+			width: 12,
+			label: 'Access Token',
+			isVisible: (options) => !!options.managed_secrets,
+		},
+		{
+			type: 'textinput',
+			id: 'refreshToken',
+			width: 12,
+			label: 'Refresh Token',
+			isVisible: (options) => !!options.managed_secrets,
 		},
 	]
 }
