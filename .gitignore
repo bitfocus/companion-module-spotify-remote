@@ -4,3 +4,5 @@ dist/
 package-lock.json
 /pkg
 /pkg.tgz
+DEBUG-*
+/.yarn

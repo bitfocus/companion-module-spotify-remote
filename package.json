@@ -4,24 +4,25 @@
 	"main": "dist/index.js",
 	"type": "module",
 	"scripts": {
-		"prepare": "husky install",
+		"postinstall": "husky install",
 		"build": "rimraf dist && tsc -p tsconfig.build.json",
 		"build:main": "tsc -p tsconfig.build.json",
 		"dev": "tsc -p tsconfig.build.json --watch",
-		"lint:raw": "eslint --ext .ts --ext .js --ext .tsx --ext .jsx --ignore-pattern dist",
-		"lint": "yarn lint:raw .",
-		"lint-fix": "yarn lint --fix",
-		"license-validate": "yarn sofie-licensecheck"
+		"lint:raw": "run eslint --ext .ts --ext .js --ext .tsx --ext .jsx --ignore-pattern dist",
+		"lint": "run lint:raw .",
+		"lint-fix": "run lint --fix",
+		"eslint": "./node_modules/.bin/eslint",
+		"prettier": "./node_modules/.bin/prettier"
 	},
 	"author": "Peter Stather",
 	"license": "MIT",
 	"prettier": "@companion-module/tools/.prettierrc.json",
 	"lint-staged": {
 		"*.{css,json,md,scss}": [
-			"prettier --write"
+			"run prettier --write"
 		],
 		"*.{ts,tsx,js,jsx}": [
-			"yarn lint:raw --fix"
+			"run lint:raw --fix"
 		]
 	},
 	"engines": {
@@ -41,5 +42,6 @@
 		"lint-staged": "^13.0.4",
 		"rimraf": "^3.0.2",
 		"typescript": "~4.9"
-	}
+	},
+	"packageManager": "yarn@4.4.0"
 }
