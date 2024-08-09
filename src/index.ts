@@ -307,7 +307,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 			},
 			{
 				variableId: 'currentAlbumArt',
-				name: 'Currently playing album artwork',
+				name: 'Currently playing album artwork. Use the generic http module to display this on a button',
 			},
 			{
 				variableId: 'deviceName',
