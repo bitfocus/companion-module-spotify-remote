@@ -5,7 +5,6 @@ export interface DeviceConfig {
 	clientSecret?: string
 	redirectUri?: string
 	code?: string
-	accessToken?: string
 	refreshToken?: string
 	deviceId?: string
 	authURL?: string
@@ -23,13 +22,13 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 		{
 			type: 'textinput',
 			id: 'clientId',
-			width: 12,
+			width: 6,
 			label: 'Client ID',
 		},
 		{
 			type: 'textinput',
 			id: 'clientSecret',
-			width: 12,
+			width: 6,
 			label: 'Client Secret',
 		},
 		{
@@ -46,12 +45,6 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 		},
 		{
 			type: 'textinput',
-			id: 'accessToken',
-			width: 12,
-			label: 'Access Token',
-		},
-		{
-			type: 'textinput',
 			id: 'refreshToken',
 			width: 12,
 			label: 'Refresh Token',
@@ -60,7 +53,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			type: 'textinput',
 			id: 'deviceId',
 			width: 12,
-			label: 'Device ID',
+			label: 'Selected Playback Device ID',
 		},
 		{
 			type: 'textinput',
