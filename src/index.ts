@@ -8,7 +8,7 @@ import {
 	SomeCompanionConfigField,
 } from '@companion-module/base'
 import PQueue from 'p-queue'
-import { GetConfigFields, DeviceConfig } from './config.js'
+import { GetConfigFields, DeviceConfig, DEFAULT_CONFIG, ensureRequiredConfigIsDefined } from './config.js'
 import { FeedbackId, GetFeedbacksList } from './feedback.js'
 import { DoAction, GetActionsList } from './actions.js'
 import { SpotifyPlaybackState, SpotifyState } from './state.js'
@@ -48,7 +48,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 			playbackState: null,
 		}
 
-		this.config = {}
+		this.config = { ...DEFAULT_CONFIG }
 	}
 
 	public async checkIfApiErrorShouldRetry(err: any): Promise<boolean> {
@@ -106,6 +106,9 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 
 	async configUpdated(config: DeviceConfig): Promise<void> {
 		this.config = config
+		if (ensureRequiredConfigIsDefined(this.config)) {
+			this.saveConfig(this.config)
+		}
 
 		this.setupOrRefreshAuthentication()
 
@@ -191,13 +194,16 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 
 	async init(config: DeviceConfig): Promise<void> {
 		this.config = config
+		if (ensureRequiredConfigIsDefined(this.config)) {
+			this.saveConfig(this.config)
+		}
 
 		this.updateStatus(InstanceStatus.Connecting)
 
 		this.setupOrRefreshAuthentication()
 
-		if (!this.pollTimer) {
-			this.pollTimer = setInterval(() => this.queuePoll(), 3000) // Check every 3 seconds. This leaves a bit of headroom before we hit the daily api limit
+		if (!this.pollTimer && this.config.pollInterval) {
+			this.pollTimer = setInterval(() => this.queuePoll(), this.config.pollInterval * 1000) // Check every 3 seconds. This leaves a bit of headroom before we hit the daily api limit
 		}
 
 		this.initActions()

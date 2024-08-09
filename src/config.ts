@@ -1,4 +1,8 @@
-import { SomeCompanionConfigField } from '@companion-module/base'
+import type { SomeCompanionConfigField } from '@companion-module/base'
+
+export const DEFAULT_CONFIG: DeviceConfig = {
+	pollInterval: 3,
+}
 
 export interface DeviceConfig {
 	clientId?: string
@@ -8,6 +12,7 @@ export interface DeviceConfig {
 	refreshToken?: string
 	deviceId?: string
 	authURL?: string
+	pollInterval: number
 }
 
 export function GetConfigFields(): SomeCompanionConfigField[] {
@@ -61,5 +66,30 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			width: 12,
 			label: 'Auth URL',
 		},
+		{
+			type: 'textinput',
+			id: 'pollInterval',
+			width: 6,
+			label: 'API Poll Interval (seconds)',
+		},
+		{
+			type: 'static-text',
+			id: '_poll_info_',
+			width: 6,
+			label: '',
+			value:
+				'This is how often the module will poll the Spotify API for updates. Default is 3 seconds. This may need to be increased if reaching the api rate limit.',
+		},
 	]
+}
+
+export function ensureRequiredConfigIsDefined(config: DeviceConfig): boolean {
+	let changed = false
+
+	if (!config.pollInterval || config.pollInterval < 0) {
+		config.pollInterval = DEFAULT_CONFIG.pollInterval
+		changed = true
+	}
+
+	return changed
 }
