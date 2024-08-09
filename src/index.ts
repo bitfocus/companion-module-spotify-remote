@@ -313,6 +313,10 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 				variableId: 'deviceName',
 				name: 'Current device name',
 			},
+			{
+				variableId: 'deviceId',
+				name: 'Current device id',
+			},
 		]
 
 		this.setVariableDefinitions(variables)
@@ -494,6 +498,10 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		if (forceUpdate || oldState?.deviceInfo?.name !== newState?.deviceInfo?.name) {
 			invalidatedFeedbacks.push(FeedbackId.ActiveDevice)
 			variableUpdates['deviceName'] = newState?.deviceInfo?.name ?? '-'
+		}
+		if (forceUpdate || oldState?.deviceInfo?.id !== newState?.deviceInfo?.id) {
+			invalidatedFeedbacks.push(FeedbackId.ActiveDevice)
+			variableUpdates['deviceId'] = newState?.deviceInfo?.id ?? '-'
 		}
 
 		// Inform companion of the state changes
