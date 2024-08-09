@@ -217,10 +217,10 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		return GetConfigFields()
 	}
 	private initActions() {
-		const executeActionWrapper = (fcn: DoAction) => {
+		const executeActionWrapper = async (fcn: DoAction) => {
 			// Verify the api client is configured
 			if (this.canPollOrPost()) {
-				fcn(this, this.config.deviceId || null)
+				await fcn(this, this.config.deviceId || null)
 					.then(() => {
 						// Do a poll asap, to catch the changes
 						this.queuePoll()
