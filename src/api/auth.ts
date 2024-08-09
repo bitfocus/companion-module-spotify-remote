@@ -2,14 +2,6 @@ import got from 'got'
 import { URL } from 'url'
 import { DefaultTimeout, doRequest, Response, SpotifyAuthUrl } from './util.js'
 
-export interface SpotifyAuth {
-	clientId: string
-	clientSecret: string
-	redirectUri: string
-	accessToken: string
-	refreshToken: string
-}
-
 export function GenerateAuthorizeUrl(
 	clientId: string,
 	redirectUri: string,
