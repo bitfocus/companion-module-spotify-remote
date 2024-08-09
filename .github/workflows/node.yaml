@@ -12,6 +12,7 @@ jobs:
           node-version: 18.x
       - name: yarn update
         run: |
+          corepack enable
           yarn
       - name: check format
         run: |
@@ -26,6 +27,7 @@ jobs:
           node-version: 18.x
       - name: yarn update
         run: |
+          corepack enable
           yarn
       - name: build typescript
         run: |
