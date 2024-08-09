@@ -205,7 +205,7 @@ export async function SeekPosition(
 export async function PlaySpecificList(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
-	raw_uri: string,
+	context_uri: string,
 	behavior: 'return' | 'resume' | 'force',
 	attempt = 0
 ): Promise<void> {
@@ -215,9 +215,9 @@ export async function PlaySpecificList(
 	try {
 		if (behavior !== 'force') {
 			const data = await getMyCurrentPlaybackState(reqOptions)
-			if (data.body?.context?.uri === raw_uri) {
+			if (data.body?.context?.uri === context_uri) {
 				if (behavior == 'return' || (behavior == 'resume' && data.body.is_playing)) {
-					instance.log('warn', `Already playing that ${raw_uri}`)
+					instance.log('warn', `Already playing that ${context_uri}`)
 				} else if (behavior == 'resume') {
 					await play(reqOptions, { deviceId })
 				}
@@ -225,7 +225,6 @@ export async function PlaySpecificList(
 				return
 			}
 		}
-		const context_uri = await instance.parseVariablesInString(raw_uri)
 		await play(reqOptions, {
 			deviceId,
 			context_uri,
@@ -233,7 +232,7 @@ export async function PlaySpecificList(
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
-			return PlaySpecificList(instance, deviceId, raw_uri, behavior, attempt + 1)
+			return PlaySpecificList(instance, deviceId, context_uri, behavior, attempt + 1)
 		} else {
 			throw err
 		}

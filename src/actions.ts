@@ -78,6 +78,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					type: 'textinput',
 					label: 'Item ID',
 					id: 'context_uri',
+					useVariables: true,
 				},
 				{
 					type: 'dropdown',
@@ -91,13 +92,17 @@ export function GetActionsList(executeAction: (fcn: DoAction) => void): Companio
 					],
 				},
 			],
-			callback: (action) => {
+			callback: (action, context) => {
 				if (action.options.type && action.options.context_uri && typeof action.options.behavior === 'string') {
 					const behavior = action.options.behavior as any // TODO - type
-					const context_uri = `spotify:${action.options.type}:${action.options.context_uri}`
 
 					executeAction(async (instance, deviceId) => {
-						if (deviceId) await PlaySpecificList(instance, deviceId, context_uri, behavior)
+						if (!deviceId) return
+
+						const context_uri_portion = await context.parseVariablesInString(String(action.options.context_uri))
+						const context_uri = `spotify:${action.options.type}:${context_uri_portion}`
+
+						await PlaySpecificList(instance, deviceId, context_uri, behavior)
 					})
 				}
 			},
