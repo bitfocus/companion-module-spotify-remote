@@ -1,6 +1,8 @@
 /// <reference types="spotify-api" />
 
 import {
+	CompanionHTTPRequest,
+	CompanionHTTPResponse,
 	CompanionVariableDefinition,
 	InstanceBase,
 	InstanceStatus,
@@ -176,7 +178,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 				this.config.clientId,
 				this.config.redirectUri,
 				AUTH_SCOPES,
-				''
+				this.id
 			).toString()
 			this.saveConfig(this.config)
 		}
@@ -228,6 +230,64 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 	getConfigFields(): SomeCompanionConfigField[] {
 		return GetConfigFields()
 	}
+
+	async handleHttpRequest(request: CompanionHTTPRequest): Promise<CompanionHTTPResponse> {
+		if (request.path === '/oauth/callback') {
+			const authCode = request.query['code']
+			if (!authCode) {
+				return {
+					status: 400,
+					body: 'Missing auth code!',
+				}
+			}
+
+			if (!this.config.clientId || !this.config.clientSecret || !this.config.redirectUri) {
+				return {
+					status: 400,
+					body: 'Missing required config fields!',
+				}
+			}
+
+			try {
+				const data = await authorizationCodeGrant(
+					this.config.clientId,
+					this.config.clientSecret,
+					this.config.redirectUri,
+					authCode
+				)
+				if (data.body?.access_token) {
+					this.config.accessToken = data.body.access_token
+				} else {
+					delete this.config.accessToken
+				}
+				if (data.body?.refresh_token) {
+					this.config.refreshToken = data.body.refresh_token
+				} else {
+					delete this.config.refreshToken
+				}
+				this.saveConfig(this.config)
+
+				this.applyConfigValues()
+			} catch (err: any) {
+				this.log('debug', `Failed to get access token: ${err?.message ?? err?.toString()}`)
+				return {
+					status: 500,
+					body: `Failed to authenticate\n${err?.message ?? err?.toString()}`,
+				}
+			}
+			// TODO
+
+			return {
+				status: 200,
+				body: 'Success!\nYou can close this tab',
+			}
+		}
+
+		return {
+			status: 404,
+		}
+	}
+
 	private initActions() {
 		const executeActionWrapper = (fcn: DoAction) => {
 			// Verify the api client is configured
