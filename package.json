@@ -29,7 +29,7 @@
 		"node": "^18.12"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.9.0",
+		"@companion-module/base": "~1.10.0",
 		"@types/node": "^18.19.43",
 		"@types/spotify-api": "^0.0.25",
 		"got": "^12.6.1",
