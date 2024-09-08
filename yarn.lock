@@ -22,9 +22,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@companion-module/tools@npm:^2.0.1":
-  version: 2.0.1
-  resolution: "@companion-module/tools@npm:2.0.1"
+"@companion-module/tools@npm:^2.0.2":
+  version: 2.0.2
+  resolution: "@companion-module/tools@npm:2.0.2"
   dependencies:
     "@eslint/js": "npm:^9.9.1"
     eslint-config-prettier: "npm:^9.1.0"
@@ -52,7 +52,7 @@ __metadata:
     companion-generate-manifest: scripts/generate-manifest.js
     companion-module-build: scripts/build.js
     companion-module-check: scripts/check.js
-  checksum: 10c0/ade35127d67327d1a81e38fb56f0474a8eebef9afed008e7fb8d2a4747db8bc09df46f9bec2c83cc8dc5d398808eaf303e815b148c6382a2882d1263adc996cf
+  checksum: 10c0/e6b2c42d77a1a3614cf79a2779c67b7f0f092747c139d482d07f6bc617df2782719911428ea846c2834f222f8fdfc57dd81267e91d5b12a55cd50d076f029edf
   languageName: node
   linkType: hard
 
@@ -2957,7 +2957,7 @@ __metadata:
   resolution: "spotify-remote@workspace:."
   dependencies:
     "@companion-module/base": "npm:~1.10.0"
-    "@companion-module/tools": "npm:^2.0.1"
+    "@companion-module/tools": "npm:^2.0.2"
     "@types/node": "npm:^18.19.50"
     "@types/spotify-api": "npm:^0.0.25"
     eslint: "npm:^9.10.0"
