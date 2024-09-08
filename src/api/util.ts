@@ -24,14 +24,14 @@ export async function doGetRequest<T>(reqOptions: RequestOptionsBase, pathname: 
 export type QueryParameters = Record<string, string | number | boolean | null | undefined>
 export type BodyParameters = Record<string, any>
 
-export async function doPutRequest<T>(
+export async function doPutRequest(
 	reqOptions: RequestOptionsBase,
 	pathname: string,
 	queryParams: QueryParameters,
 	body: BodyParameters,
-): Promise<Response<T>> {
-	return doRequest<T>(
-		got.put<T>(SpotifyBaseUrl + pathname, {
+): Promise<Response<void>> {
+	return doRequestNoResponse(
+		got.put<void>(SpotifyBaseUrl + pathname, {
 			headers: {
 				Authorization: `Bearer ${reqOptions.accessToken}`,
 				'Content-Type': 'application/json',
@@ -47,13 +47,13 @@ export async function doPutRequest<T>(
 	)
 }
 
-export async function doPostRequest<T>(
+export async function doPostRequest(
 	reqOptions: RequestOptionsBase,
 	pathname: string,
 	queryParams: QueryParameters,
-): Promise<Response<T>> {
-	return doRequest<T>(
-		got.post<T>(SpotifyBaseUrl + pathname, {
+): Promise<Response<void>> {
+	return doRequestNoResponse(
+		got.post<void>(SpotifyBaseUrl + pathname, {
 			headers: {
 				Authorization: `Bearer ${reqOptions.accessToken}`,
 				'Content-Type': 'application/json',
@@ -68,32 +68,52 @@ export async function doPostRequest<T>(
 	)
 }
 
+export async function doRequestNoResponse(req: CancelableRequest<Response<void>>): Promise<Response<void>> {
+	try {
+		// console.log('json', await req.json(), (await req.buffer()).length)
+		const res = await req
+
+		return {
+			headers: res.headers,
+			statusCode: res.statusCode,
+			body: null,
+		}
+	} catch (e: unknown) {
+		return wrapHttpError(e)
+	}
+}
+
 export async function doRequest<T>(req: CancelableRequest<Response<T>>): Promise<Response<T>> {
 	try {
 		// console.log('json', await req.json(), (await req.buffer()).length)
 		const res = await req
-		// console.log(res.body)
+
+		console.log('body', res.body)
 		return {
 			headers: res.headers,
 			statusCode: res.statusCode,
 			body: await req.json(),
 		}
 	} catch (e: unknown) {
-		if (e instanceof HTTPError) {
-			// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-			return Promise.reject({
-				headers: e.response.headers,
-				statusCode: e.response.statusCode,
-				error: e,
-			})
-		} else {
-			// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-			return Promise.reject({
-				headers: {},
-				statusCode: 500,
-				error: e,
-			})
-		}
+		return wrapHttpError(e)
+	}
+}
+
+async function wrapHttpError(e: unknown): Promise<never> {
+	if (e instanceof HTTPError) {
+		// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+		return Promise.reject({
+			headers: e.response.headers,
+			statusCode: e.response.statusCode,
+			error: e,
+		})
+	} else {
+		// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+		return Promise.reject({
+			headers: {},
+			statusCode: 500,
+			error: e,
+		})
 	}
 }
 

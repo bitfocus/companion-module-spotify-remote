@@ -229,12 +229,13 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 			// Verify the api client is configured
 			if (this.canPollOrPost()) {
 				await fcn(this, this.config.deviceId || null)
+					.catch((e) => {
+						console.log(e)
+						this.log('error', `Execute action failed: ${e.toString()}`)
+					})
 					.then(() => {
 						// Do a poll asap, to catch the changes
 						this.queuePoll()
-					})
-					.catch((e) => {
-						this.log('error', `Execute action failed: ${e.toString()}`)
 					})
 			}
 		}
@@ -337,6 +338,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		if (this.pollQueue.size > 1) {
 			this.log('debug', `Poll queue overflow`)
 		} else {
+			this.log('debug', `queue poll`)
 			this.pollQueue
 				.add(async () => {
 					// If everything is populated we can do the poll
