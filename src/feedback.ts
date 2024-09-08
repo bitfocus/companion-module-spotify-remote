@@ -1,4 +1,4 @@
-import { CompanionFeedbackDefinitions, CompanionFeedbackDefinition, combineRgb } from '@companion-module/base'
+import { CompanionFeedbackDefinitions, CompanionFeedbackDefinition } from '@companion-module/base'
 import { SpotifyState } from './state.js'
 
 export enum FeedbackId {
@@ -17,8 +17,8 @@ export function GetFeedbacksList(getState: () => SpotifyState): CompanionFeedbac
 			description: 'If there is active playback, set the button to this colour',
 			options: [],
 			defaultStyle: {
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 255, 0),
+				color: 0x000000,
+				bgcolor: 0x00ff00,
 			},
 			callback: (_feedback): boolean => !!getState().playbackState?.isPlaying,
 		},
@@ -29,8 +29,8 @@ export function GetFeedbacksList(getState: () => SpotifyState): CompanionFeedbac
 			description: 'If shuffle is enabled, set the button to this colour',
 			options: [],
 			defaultStyle: {
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 255, 0),
+				color: 0x000000,
+				bgcolor: 0x00ff00,
 			},
 			callback: (_feedback): boolean => !!getState().playbackState?.isShuffle,
 		},
@@ -62,8 +62,8 @@ export function GetFeedbacksList(getState: () => SpotifyState): CompanionFeedbac
 				},
 			],
 			defaultStyle: {
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 255, 0),
+				color: 0x000000,
+				bgcolor: 0x00ff00,
 			},
 			callback: (feedback): boolean => getState().playbackState?.repeatState == feedback.options.type,
 		},
@@ -80,8 +80,8 @@ export function GetFeedbacksList(getState: () => SpotifyState): CompanionFeedbac
 				},
 			],
 			defaultStyle: {
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 255, 0),
+				color: 0x000000,
+				bgcolor: 0x00ff00,
 			},
 			callback: (feedback): boolean =>
 				typeof feedback.options.device === 'string' &&
@@ -100,8 +100,8 @@ export function GetFeedbacksList(getState: () => SpotifyState): CompanionFeedbac
 				},
 			],
 			defaultStyle: {
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 255, 0),
+				color: 0x000000,
+				bgcolor: 0x00ff00,
 			},
 			callback: (feedback): boolean => getState().playbackState?.currentContext == feedback.options.id,
 		},
