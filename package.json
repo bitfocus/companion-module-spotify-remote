@@ -30,16 +30,16 @@
 	},
 	"dependencies": {
 		"@companion-module/base": "~1.10.0",
-		"@types/node": "^18.19.43",
+		"@types/node": "^18.19.50",
 		"@types/spotify-api": "^0.0.25",
 		"got": "^12.6.1",
 		"p-queue": "^8.0.1",
-		"type-fest": "^4.24.0"
+		"type-fest": "^4.26.1"
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^1.5.1",
-		"husky": "^9.1.4",
-		"lint-staged": "^15.2.8",
+		"husky": "^9.1.5",
+		"lint-staged": "^15.2.10",
 		"rimraf": "^5.0.10",
 		"typescript": "~5.1.6"
 	},
