@@ -8,18 +8,16 @@
 		"build": "rimraf dist && tsc -p tsconfig.build.json",
 		"build:main": "tsc -p tsconfig.build.json",
 		"dev": "tsc -p tsconfig.build.json --watch",
-		"lint:raw": "run eslint --ext .ts --ext .js --ext .tsx --ext .jsx --ignore-pattern dist",
+		"lint:raw": "eslint",
 		"lint": "run lint:raw .",
-		"lint-fix": "run lint --fix",
-		"eslint": "./node_modules/.bin/eslint",
-		"prettier": "./node_modules/.bin/prettier"
+		"lint-fix": "run lint --fix"
 	},
 	"author": "Peter Stather",
 	"license": "MIT",
 	"prettier": "@companion-module/tools/.prettierrc.json",
 	"lint-staged": {
 		"*.{css,json,md,scss}": [
-			"run prettier --write"
+			"prettier --write"
 		],
 		"*.{ts,tsx,js,jsx}": [
 			"run lint:raw --fix"
@@ -37,11 +35,14 @@
 		"type-fest": "^4.26.1"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^1.5.1",
+		"@companion-module/tools": "^2.0.1",
+		"eslint": "^9.10.0",
 		"husky": "^9.1.5",
 		"lint-staged": "^15.2.10",
+		"prettier": "^3.3.3",
 		"rimraf": "^5.0.10",
-		"typescript": "~5.1.6"
+		"typescript": "~5.1.6",
+		"typescript-eslint": "^8.4.0"
 	},
 	"packageManager": "yarn@4.4.0"
 }
