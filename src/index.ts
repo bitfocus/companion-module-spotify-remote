@@ -184,7 +184,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 				this.config.clientId,
 				this.config.redirectUri,
 				AUTH_SCOPES,
-				''
+				'',
 			).toString()
 			this.saveConfig(this.config)
 

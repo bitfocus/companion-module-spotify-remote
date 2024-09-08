@@ -6,7 +6,7 @@ export function GenerateAuthorizeUrl(
 	clientId: string,
 	redirectUri: string,
 	scopes: string[],
-	state: string | undefined
+	state: string | undefined,
 ): URL {
 	const url = new URL(SpotifyAuthUrl + '/authorize')
 	url.searchParams.append('client_id', clientId)
@@ -33,7 +33,7 @@ export interface RefreshAccessTokenResponse {
 export async function refreshAccessToken(
 	clientId: string,
 	clientSecret: string,
-	refreshToken: string
+	refreshToken: string,
 ): Promise<Response<RefreshAccessTokenResponse>> {
 	const authToken = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 	return doRequest<RefreshAccessTokenResponse>(
@@ -51,7 +51,7 @@ export async function refreshAccessToken(
 				grant_type: 'refresh_token',
 				refresh_token: refreshToken,
 			},
-		})
+		}),
 	)
 }
 export interface AuthorizationCodeGrantResponse {
@@ -65,7 +65,7 @@ export async function authorizationCodeGrant(
 	clientId: string,
 	clientSecret: string,
 	redirectURI: string,
-	authCode: string
+	authCode: string,
 ): Promise<Response<AuthorizationCodeGrantResponse>> {
 	const authToken = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 	return doRequest<AuthorizationCodeGrantResponse>(
@@ -86,6 +86,6 @@ export async function authorizationCodeGrant(
 				client_id: clientId,
 				client_secret: clientSecret,
 			},
-		})
+		}),
 	)
 }

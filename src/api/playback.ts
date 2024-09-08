@@ -10,7 +10,7 @@ import {
 } from './util.js'
 
 export async function getMyCurrentPlaybackState(
-	reqOptions: RequestOptionsBase
+	reqOptions: RequestOptionsBase,
 ): Promise<Response<SpotifyApi.CurrentPlaybackResponse | undefined>> {
 	return doGetRequest(reqOptions, '/v1/me/player')
 }
@@ -35,7 +35,7 @@ export interface TransferPlaybackOptions {
 export async function transferMyPlayback(
 	reqOptions: RequestOptionsBase,
 	deviceIds: ReadonlyArray<string>,
-	options?: TransferPlaybackOptions
+	options?: TransferPlaybackOptions,
 ): Promise<Response<void>> {
 	const body: BodyParameters = {
 		...options,
@@ -77,7 +77,7 @@ export async function play(reqOptions: RequestOptionsBase, options?: PlayOptions
 export async function setRepeat(
 	reqOptions: RequestOptionsBase,
 	state: 'off' | 'track' | 'context',
-	options?: DeviceOptions
+	options?: DeviceOptions,
 ): Promise<Response<void>> {
 	const params: QueryParameters = {
 		state,
@@ -90,7 +90,7 @@ export async function setRepeat(
 export async function setShuffle(
 	reqOptions: RequestOptionsBase,
 	state: boolean,
-	options?: DeviceOptions
+	options?: DeviceOptions,
 ): Promise<Response<void>> {
 	const params: QueryParameters = {
 		state,
@@ -103,7 +103,7 @@ export async function setShuffle(
 export async function seek(
 	reqOptions: RequestOptionsBase,
 	positionMs: number,
-	options?: DeviceOptions
+	options?: DeviceOptions,
 ): Promise<Response<void>> {
 	const params: QueryParameters = {
 		position_ms: positionMs,

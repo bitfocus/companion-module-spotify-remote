@@ -17,7 +17,7 @@ export async function doGetRequest<T>(reqOptions: RequestOptionsBase, pathname: 
 				request: DefaultTimeout,
 			},
 			hooks: {},
-		})
+		}),
 	)
 }
 
@@ -28,7 +28,7 @@ export async function doPutRequest<T>(
 	reqOptions: RequestOptionsBase,
 	pathname: string,
 	queryParams: QueryParameters,
-	body: BodyParameters
+	body: BodyParameters,
 ): Promise<Response<T>> {
 	return doRequest<T>(
 		got.put<T>(SpotifyBaseUrl + pathname, {
@@ -43,14 +43,14 @@ export async function doPutRequest<T>(
 			hooks: {},
 			searchParams: queryParams,
 			json: body,
-		})
+		}),
 	)
 }
 
 export async function doPostRequest<T>(
 	reqOptions: RequestOptionsBase,
 	pathname: string,
-	queryParams: QueryParameters
+	queryParams: QueryParameters,
 ): Promise<Response<T>> {
 	return doRequest<T>(
 		got.post<T>(SpotifyBaseUrl + pathname, {
@@ -64,7 +64,7 @@ export async function doPostRequest<T>(
 			},
 			hooks: {},
 			searchParams: queryParams,
-		})
+		}),
 	)
 }
 
@@ -80,12 +80,14 @@ export async function doRequest<T>(req: CancelableRequest<Response<T>>): Promise
 		}
 	} catch (e: unknown) {
 		if (e instanceof HTTPError) {
+			// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
 			return Promise.reject({
 				headers: e.response.headers,
 				statusCode: e.response.statusCode,
 				error: e,
 			})
 		} else {
+			// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
 			return Promise.reject({
 				headers: {},
 				statusCode: 500,

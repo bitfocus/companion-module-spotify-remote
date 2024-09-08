@@ -20,7 +20,7 @@ export async function ChangeVolume(
 	deviceId: string,
 	absolute: boolean,
 	volumeOrDelta: number,
-	attempt = 0
+	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
@@ -106,7 +106,7 @@ export async function ChangePlayState(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
 	action: 'play' | 'pause' | 'toggle',
-	attempt = 0
+	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
@@ -133,7 +133,7 @@ export async function ChangeRepeatState(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
 	target: 'off' | 'track' | 'context',
-	attempt = 0
+	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
@@ -158,7 +158,7 @@ export async function ChangeShuffleState(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
 	target: boolean | 'toggle',
-	attempt = 0
+	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
@@ -185,7 +185,7 @@ export async function SeekPosition(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
 	positionMs: number,
-	attempt = 0
+	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
@@ -207,7 +207,7 @@ export async function PlaySpecificList(
 	deviceId: string,
 	context_uri: string,
 	behavior: 'return' | 'resume' | 'force',
-	attempt = 0
+	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
@@ -244,7 +244,7 @@ export async function PlaySpecificTracks(
 	deviceId: string,
 	uris: string[],
 	positionMs: number,
-	attempt = 0
+	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
