@@ -7,7 +7,7 @@
 		"baseUrl": "./",
 		"paths": {
 			"*": ["./node_modules/*"],
-			"{{PACKAGE-NAME}}": ["./src/index.ts"]
+			"{{PACKAGE-NAME}}": ["./src/main.ts"]
 		},
 		"types": ["node"],
 		"module": "es2020"

@@ -1,7 +1,7 @@
 {
 	"name": "spotify-remote",
 	"version": "2.2.0",
-	"main": "dist/index.js",
+	"main": "dist/main.js",
 	"type": "module",
 	"scripts": {
 		"postinstall": "husky",

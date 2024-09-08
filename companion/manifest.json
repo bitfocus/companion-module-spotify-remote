@@ -21,13 +21,9 @@
 		"type": "node18",
 		"api": "nodejs-ipc",
 		"apiVersion": "0.0.0",
-		"entrypoint": "../dist/index.js"
+		"entrypoint": "../dist/main.js"
 	},
 	"manufacturer": "Spotify",
-	"products": [
-		"Web API and Controller"
-	],
-	"keywords": [
-		"Spotify"
-	]
+	"products": ["Web API and Controller"],
+	"keywords": ["Spotify"]
 }
