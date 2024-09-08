@@ -110,14 +110,16 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 			this.saveConfig(this.config)
 		}
 
-		this.setupOrRefreshAuthentication()
+		this.setupOrRefreshAuthentication(true)
 
 		this.initActions()
 	}
 
-	private setupOrRefreshAuthentication() {
-		// Clear the access token each time to ensure it is correct
-		this.accessToken = null
+	private setupOrRefreshAuthentication(clearToken = false) {
+		if (clearToken) {
+			// Clear the access token each time to ensure it is correct
+			this.accessToken = null
+		}
 
 		if (!this.config.clientId || !this.config.clientSecret || !this.config.redirectUri) {
 			this.updateStatus(InstanceStatus.BadConfig)
@@ -200,7 +202,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 
 		this.updateStatus(InstanceStatus.Connecting)
 
-		this.setupOrRefreshAuthentication()
+		this.setupOrRefreshAuthentication(true)
 
 		if (!this.pollTimer && this.config.pollInterval) {
 			this.pollTimer = setInterval(() => this.queuePoll(), this.config.pollInterval * 1000) // Check every 3 seconds. This leaves a bit of headroom before we hit the daily api limit
@@ -332,27 +334,27 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		return !!this.accessToken
 	}
 	public queuePoll(): void {
-		// If everything is populated we can do the poll
-		if (this.canPollOrPost()) {
-			if (this.pollQueue.size > 1) {
-				this.log('debug', `Poll queue overflow`)
-			} else {
-				this.pollQueue
-					.add(async () => {
-						if (this.canPollOrPost()) {
-							try {
-								await this.doPollPlaybackState()
-							} catch (e: any) {
-								this.log('debug', `Poll failed: ${e.toString()}`)
-							}
-						}
-					})
-					.catch((e) => {
-						this.log('debug', `Failed to queue poll: ${e.toString()}`)
-					})
-			}
+		if (this.pollQueue.size > 1) {
+			this.log('debug', `Poll queue overflow`)
 		} else {
-			this.updateStatus(InstanceStatus.BadConfig)
+			this.pollQueue
+				.add(async () => {
+					// If everything is populated we can do the poll
+					if (this.canPollOrPost()) {
+						try {
+							await this.doPollPlaybackState()
+						} catch (e: any) {
+							this.log('debug', `Poll failed: ${e.toString()}`)
+						}
+					} else {
+						this.updateStatus(InstanceStatus.BadConfig)
+
+						this.setupOrRefreshAuthentication(false)
+					}
+				})
+				.catch((e) => {
+					this.log('debug', `Failed to queue poll: ${e.toString()}`)
+				})
 		}
 	}
 
