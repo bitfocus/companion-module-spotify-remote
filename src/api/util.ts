@@ -88,7 +88,6 @@ export async function doRequest<T>(req: CancelableRequest<Response<T>>): Promise
 		// console.log('json', await req.json(), (await req.buffer()).length)
 		const res = await req
 
-		console.log('body', res.body)
 		return {
 			headers: res.headers,
 			statusCode: res.statusCode,
