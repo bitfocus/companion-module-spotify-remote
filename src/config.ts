@@ -37,6 +37,14 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			label: 'Client Secret',
 		},
 		{
+			type: 'static-text',
+			id: '_redirect_info_',
+			width: 12,
+			label: '',
+			value:
+				'You may need to update the Redirect URL both here and in the spotify api settings, as the previously recommended location is no longer available.<br/>We now recommend https://bitfocus.github.io/companion-module-spotify-remote/',
+		},
+		{
 			type: 'textinput',
 			id: 'redirectUri',
 			width: 12,
