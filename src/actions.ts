@@ -8,6 +8,7 @@ import {
 	PlaySpecificList,
 	PlaySpecificTracks,
 	PreviousSong,
+	QueueItem,
 	SeekPosition,
 	SkipSong,
 	TransferPlayback,
@@ -20,6 +21,7 @@ export enum ActionId {
 	PlaySpecificList = 'playSpecificList',
 	PlaySpecificTracks = 'playSpecificTracks',
 	Pause = 'pause',
+	QueueItem = 'queueItem',
 	VolumeUp = 'volumeUp',
 	VolumeDown = 'volumeDown',
 	VolumeSpecific = 'volumeSpecific',
@@ -345,6 +347,29 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						await TransferPlayback(instance, targetId)
 					}
 				})
+			},
+		},
+		[ActionId.QueueItem]: {
+			name: 'Add Track to Queue',
+			options: [
+				{
+					tooltip: 'Provide the ID for the track',
+					required: true,
+					type: 'textinput',
+					label: 'Track ID',
+					id: 'context_uri',
+					useVariables: true,
+				},
+			],
+			callback: async (action, context) => {
+				if (typeof action.options.context_uri === 'string') {
+					const context_uri_portion = await context.parseVariablesInString(String(action.options.context_uri))
+					const context_uri = `spotify:track:${context_uri_portion}`
+
+					await executeAction(async (instance, deviceId) => {
+						if (deviceId) await QueueItem(instance, deviceId, context_uri)
+					})
+				}
 			},
 		},
 	}

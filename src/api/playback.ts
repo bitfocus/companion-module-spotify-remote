@@ -9,6 +9,19 @@ import {
 	BodyParameters,
 } from './util.js'
 
+export async function addItemToQueue(
+	reqOptions: RequestOptionsBase,
+	context_uri: string,
+	options?: DeviceOptions,
+): Promise<Response<void>> {
+	const params: QueryParameters = {
+		uri: context_uri,
+	}
+	if (options && 'deviceId' in options) params.device_id = options.deviceId
+
+	return doPostRequest(reqOptions, '/v1/me/player/queue', params)
+}
+
 export async function getMyCurrentPlaybackState(
 	reqOptions: RequestOptionsBase,
 ): Promise<Response<SpotifyApi.CurrentPlaybackResponse | undefined>> {
