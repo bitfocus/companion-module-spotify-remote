@@ -1,5 +1,6 @@
 import { getMyDevices, setVolume } from './api/device.js'
 import {
+	addItemToQueue,
 	getMyCurrentPlaybackState,
 	pause,
 	play,
@@ -47,6 +48,27 @@ export async function ChangeVolume(
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return ChangeVolume(instance, deviceId, absolute, volumeOrDelta, attempt + 1)
+		} else {
+			throw err
+		}
+	}
+}
+
+export async function QueueItem(
+	instance: SpotifyInstanceBase,
+	deviceId: string,
+	context_uri: string,
+	attempt = 0,
+): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
+	try {
+		await addItemToQueue(reqOptions, context_uri, { deviceId })
+	} catch (err) {
+		const retry = await instance.checkIfApiErrorShouldRetry(err)
+		if (retry && attempt <= MAX_ATTEMPTS) {
+			return QueueItem(instance, deviceId, context_uri, attempt + 1)
 		} else {
 			throw err
 		}
