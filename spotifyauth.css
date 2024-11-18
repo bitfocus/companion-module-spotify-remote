@@ -1,45 +1,23 @@
 .approvalDiv {
 	background: #6495ed;
-	height:260px;
-	width:680px;
-	overflow-wrap:break-word;
-	padding-bottom:20px;
+	height: 260px;
+	width: 680px;
+	overflow-wrap: break-word;
+	padding-bottom: 20px;
 }
 
 .warningDiv {
-	background-color:orange;
+	background-color: orange;
 }
 
-.clearFloat
-{
-	clear:both;
+.clearFloat {
+	clear: both;
 }
 
-.logo
-{
-	float:left;
-	height:126px;
-	width:240px;
-	padding-top:5px;
-	padding-right:10px;
+.logo {
+	float: left;
+	height: 126px;
+	width: 240px;
+	padding-top: 5px;
+	padding-right: 10px;
 }
-/*
-     FILE ARCHIVED ON 20:20:42 Nov 20, 2023 AND RETRIEVED FROM THE
-     INTERNET ARCHIVE ON 12:03:10 Sep 17, 2024.
-     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
-
-     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
-     SECTION 108(a)(3)).
-*/
-/*
-playback timings (ms):
-  captures_list: 0.542
-  exclusion.robots: 0.022
-  exclusion.robots.policy: 0.01
-  esindex: 0.011
-  cdx.remote: 12.477
-  LoadShardBlock: 55.326 (3)
-  PetaboxLoader3.datanode: 71.124 (4)
-  load_resource: 194.138
-  PetaboxLoader3.resolve: 90.824
-*/
