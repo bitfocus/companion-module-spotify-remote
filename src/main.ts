@@ -379,6 +379,13 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 					deviceInfo: null,
 				}
 
+				// If an individual track is playing then context is null from Spotify API
+				// If the current context is null, but a track is playing, then set the context to the track uri
+				// This allows feedbacks to be triggered when an track is playing
+				if (newState.currentContext === null && data.body.currently_playing_type === 'track' && data.body.item) {
+					newState.currentContext = data.body.item.uri.split(':')[2]
+				}
+
 				if (data.body.item) {
 					newState.trackInfo = {
 						durationMs: data.body.item.duration_ms,
