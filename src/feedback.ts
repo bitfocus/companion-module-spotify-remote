@@ -90,8 +90,8 @@ export function GetFeedbacksList(getState: () => SpotifyState): CompanionFeedbac
 
 		[FeedbackId.CurrentContext]: {
 			type: 'boolean',
-			name: 'Change button style if current album/artist/playlist id matches value',
-			description: 'If active album/artist/playlist matches value, change button color',
+			name: 'Change button style if current album/artist/playlist/track id matches value',
+			description: 'If active album/artist/playlist/track matches value, change button color',
 			options: [
 				{
 					type: 'textinput',
