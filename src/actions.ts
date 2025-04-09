@@ -190,18 +190,32 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			name: 'Set Volume to Specific Value',
 			options: [
 				{
-					type: 'number',
+					type: 'textinput',
 					label: 'Volume',
 					id: 'value',
-					default: 50,
-					min: 0,
-					max: 100,
-					step: 1,
+					default: '',
+					useVariables: true,
 				},
 			],
 			callback: async (action) => {
 				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await ChangeVolume(instance, deviceId, true, Number(action.options.value))
+					if (deviceId) {
+						const value = await instance.parseVariablesInString(String(action.options.value))
+
+						if (!/^\d+$/.test(value)) {
+							instance.log('warn', `Invalid volume value: ${value}`)
+							return
+						}
+
+						const intValue = Number(value)
+
+						if (intValue < 0 || intValue > 100) {
+							instance.log('warn', `Volume value out of range: ${intValue}`)
+							return
+						}
+
+						await ChangeVolume(instance, deviceId, true, intValue)
+					}
 				})
 			},
 		},
