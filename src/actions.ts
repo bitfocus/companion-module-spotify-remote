@@ -285,6 +285,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 
 						// Invalidate all feedbacks, some of them have probably changed
 						instance.checkFeedbacks()
+					} else {
+						instance.log('warn', 'No active device found')
 					}
 				})
 			},
