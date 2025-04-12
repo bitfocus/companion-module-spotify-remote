@@ -111,6 +111,15 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		this.initActions()
 	}
 
+	override updateStatus(status: InstanceStatus, message?: string | null): void {
+		// Override the implementation so that when the auth checks say 'ok' we can hijack it and report a status based on the selected device
+		if (status === InstanceStatus.Ok && !this.config.deviceId) {
+			super.updateStatus(InstanceStatus.BadConfig, 'No playout device selected')
+		} else {
+			super.updateStatus(status, message)
+		}
+	}
+
 	private setupOrRefreshAuthentication(clearToken = false) {
 		if (clearToken) {
 			// Clear the access token each time to ensure it is correct
@@ -129,7 +138,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 			this.updateStatus(InstanceStatus.Connecting)
 
 			// Fetch then clear the code
-			const code = this.config.code
+			const code = this.config.code.trim()
 			delete this.config.code
 			this.saveConfig(this.config)
 
@@ -152,7 +161,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 				})
 				.catch((err) => {
 					console.log(err)
-					this.log('debug', `Failed to get access token: ${err?.message ?? err.toString()}`)
+					this.log('debug', `Failed to get access token: ${err?.message ?? err?.toString() ?? err}`)
 				})
 		} else if (this.config.refreshToken) {
 			this.updateStatus(InstanceStatus.Connecting)
