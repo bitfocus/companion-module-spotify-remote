@@ -1,8 +1,6 @@
 import type { SomeCompanionConfigField } from '@companion-module/base'
 
-export const DEFAULT_CONFIG: DeviceConfig = {
-	pollInterval: 3,
-}
+export const DEFAULT_CONFIG: DeviceConfig = { pollInterval: 3 }
 
 export interface DeviceConfig {
 	clientId?: string
@@ -15,7 +13,7 @@ export interface DeviceConfig {
 	pollInterval: number
 }
 
-export function GetConfigFields(): SomeCompanionConfigField[] {
+export function GetConfigFields(activeDeviceId: string | null | undefined): SomeCompanionConfigField[] {
 	return [
 		{
 			type: 'static-text',
@@ -24,18 +22,8 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			label: 'Setup Information',
 			value: '<strong>PLEASE READ THE HELP FILE.</strong> (Question mark in the top right)',
 		},
-		{
-			type: 'textinput',
-			id: 'clientId',
-			width: 6,
-			label: 'Client ID',
-		},
-		{
-			type: 'textinput',
-			id: 'clientSecret',
-			width: 6,
-			label: 'Client Secret',
-		},
+		{ type: 'textinput', id: 'clientId', width: 6, label: 'Client ID' },
+		{ type: 'textinput', id: 'clientSecret', width: 6, label: 'Client Secret' },
 		{
 			type: 'static-text',
 			id: '_redirect_info_',
@@ -44,42 +32,21 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			value:
 				'You may need to update the Redirect URL both here and in the spotify api settings, as the previously recommended location is no longer available.<br/>We now recommend https://bitfocus.github.io/companion-module-spotify-remote/',
 		},
+		{ type: 'textinput', id: 'redirectUri', width: 12, label: 'Redirect URL' },
+		{ type: 'textinput', id: 'code', width: 12, label: 'Approval Code' },
+		{ type: 'textinput', id: 'refreshToken', width: 12, label: 'Refresh Token' },
+		{ type: 'textinput', id: 'deviceId', width: 12, label: 'Selected Playback Device ID' },
 		{
-			type: 'textinput',
-			id: 'redirectUri',
+			type: 'static-text',
+			id: 'deviceId_current',
 			width: 12,
-			label: 'Redirect URL',
+			label: 'Active Device ID',
+			value: activeDeviceId
+				? `The active device ID when this panel was opened is: ${activeDeviceId}`
+				: 'No device was active when this panel was opened',
 		},
-		{
-			type: 'textinput',
-			id: 'code',
-			width: 12,
-			label: 'Approval Code',
-		},
-		{
-			type: 'textinput',
-			id: 'refreshToken',
-			width: 12,
-			label: 'Refresh Token',
-		},
-		{
-			type: 'textinput',
-			id: 'deviceId',
-			width: 12,
-			label: 'Selected Playback Device ID',
-		},
-		{
-			type: 'textinput',
-			id: 'authURL',
-			width: 12,
-			label: 'Auth URL',
-		},
-		{
-			type: 'textinput',
-			id: 'pollInterval',
-			width: 6,
-			label: 'API Poll Interval (seconds)',
-		},
+		{ type: 'textinput', id: 'authURL', width: 12, label: 'Auth URL' },
+		{ type: 'textinput', id: 'pollInterval', width: 6, label: 'API Poll Interval (seconds)' },
 		{
 			type: 'static-text',
 			id: '_poll_info_',

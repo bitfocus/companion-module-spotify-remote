@@ -44,9 +44,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 	constructor(internal: unknown) {
 		super(internal)
 
-		this.state = {
-			playbackState: null,
-		}
+		this.state = { playbackState: null }
 
 		this.config = { ...DEFAULT_CONFIG }
 	}
@@ -96,9 +94,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 
 	public getRequestOptionsBase(): RequestOptionsBase | null {
 		if (this.accessToken) {
-			return {
-				accessToken: this.accessToken,
-			}
+			return { accessToken: this.accessToken }
 		} else {
 			return null
 		}
@@ -222,7 +218,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		}
 	}
 	getConfigFields(): SomeCompanionConfigField[] {
-		return GetConfigFields()
+		return GetConfigFields(this.state.playbackState?.deviceInfo?.id)
 	}
 	private initActions() {
 		const executeActionWrapper = async (fcn: DoAction) => {
@@ -250,82 +246,28 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 	}
 	private initVariables() {
 		const variables: CompanionVariableDefinition[] = [
-			{
-				variableId: 'songName',
-				name: 'Current Song Name',
-			},
-			{
-				variableId: 'albumName',
-				name: 'Current Album Name',
-			},
-			{
-				variableId: 'artistName',
-				name: 'Current Artist Name',
-			},
-			{
-				variableId: 'isPlaying',
-				name: 'Is Playback Active',
-			},
-			{
-				variableId: 'isPlayingIcon',
-				name: 'Playback Icon',
-			},
-			{
-				variableId: 'isShuffle',
-				name: 'Is Shuffle Enabled',
-			},
-			{
-				variableId: 'repeat',
-				name: 'Is Repeat Enabled',
-			},
-			{
-				variableId: 'currentContext',
-				name: 'Current Context ID',
-			},
-			{
-				variableId: 'songPercentage',
-				name: 'Percentage of the current song completed',
-			},
-			{
-				variableId: 'songProgressSeconds',
-				name: 'Progress of the current song in seconds',
-			},
-			{
-				variableId: 'songDurationSeconds',
-				name: 'Duration of the current song in seconds',
-			},
-			{
-				variableId: 'songTimeRemaining',
-				name: 'Time remaining in song (pretty formatted HH:MM:SS)',
-			},
-			{
-				variableId: 'songTimeRemainingHours',
-				name: 'Hours remaining in song (zero padded)',
-			},
-			{
-				variableId: 'songTimeRemainingMinutes',
-				name: 'Minutes remaining in song (zero padded)',
-			},
-			{
-				variableId: 'songTimeRemainingSeconds',
-				name: 'Seconds remaining in song (zero padded)',
-			},
-			{
-				variableId: 'volume',
-				name: 'Current Volume',
-			},
+			{ variableId: 'songName', name: 'Current Song Name' },
+			{ variableId: 'albumName', name: 'Current Album Name' },
+			{ variableId: 'artistName', name: 'Current Artist Name' },
+			{ variableId: 'isPlaying', name: 'Is Playback Active' },
+			{ variableId: 'isPlayingIcon', name: 'Playback Icon' },
+			{ variableId: 'isShuffle', name: 'Is Shuffle Enabled' },
+			{ variableId: 'repeat', name: 'Is Repeat Enabled' },
+			{ variableId: 'currentContext', name: 'Current Context ID' },
+			{ variableId: 'songPercentage', name: 'Percentage of the current song completed' },
+			{ variableId: 'songProgressSeconds', name: 'Progress of the current song in seconds' },
+			{ variableId: 'songDurationSeconds', name: 'Duration of the current song in seconds' },
+			{ variableId: 'songTimeRemaining', name: 'Time remaining in song (pretty formatted HH:MM:SS)' },
+			{ variableId: 'songTimeRemainingHours', name: 'Hours remaining in song (zero padded)' },
+			{ variableId: 'songTimeRemainingMinutes', name: 'Minutes remaining in song (zero padded)' },
+			{ variableId: 'songTimeRemainingSeconds', name: 'Seconds remaining in song (zero padded)' },
+			{ variableId: 'volume', name: 'Current Volume' },
 			{
 				variableId: 'currentAlbumArt',
 				name: 'Currently playing album artwork. Use the generic http module to display this on a button',
 			},
-			{
-				variableId: 'deviceName',
-				name: 'Current device name',
-			},
-			{
-				variableId: 'deviceId',
-				name: 'Current device id',
-			},
+			{ variableId: 'deviceName', name: 'Current device name' },
+			{ variableId: 'deviceId', name: 'Current device id' },
 		]
 
 		this.setVariableDefinitions(variables)
