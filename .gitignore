@@ -3,6 +3,6 @@ dist/
 .vscode/
 package-lock.json
 /pkg
-/pkg.tgz
+/*.tgz
 DEBUG-*
 /.yarn
