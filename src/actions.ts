@@ -39,6 +39,20 @@ export enum ActionId {
 export type DoAction = (instance: SpotifyInstanceBase, deviceId: string | null) => Promise<void>
 
 export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>): CompanionActionDefinitions {
+	const executeActionIfHasDeviceId = async (
+		actionName: string,
+		action: (instance: SpotifyInstanceBase, deviceId: string) => Promise<void>,
+	) => {
+		return executeAction(async (instance, deviceId) => {
+			if (!deviceId) {
+				instance.log('warn', `Skipping "${actionName}" action, no deviceId is configured`)
+				return
+			}
+
+			await action(instance, deviceId)
+		})
+	}
+
 	// getState: () => SpotifyState
 	// const initialState = getState()
 	const actions: { [id in ActionId]: CompanionActionDefinition | undefined } = {
@@ -46,8 +60,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			name: 'Toggle Play/Pause',
 			options: [],
 			callback: async () => {
-				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await ChangePlayState(instance, deviceId, 'toggle')
+				await executeActionIfHasDeviceId('play/pause', async (instance, deviceId) => {
+					await ChangePlayState(instance, deviceId, 'toggle')
 				})
 			},
 		},
@@ -55,8 +69,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			name: 'Play',
 			options: [],
 			callback: async () => {
-				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await ChangePlayState(instance, deviceId, 'play')
+				await executeActionIfHasDeviceId('play', async (instance, deviceId) => {
+					await ChangePlayState(instance, deviceId, 'play')
 				})
 			},
 		},
@@ -98,9 +112,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 				if (action.options.type && action.options.context_uri && typeof action.options.behavior === 'string') {
 					const behavior = action.options.behavior as any // TODO - type
 
-					await executeAction(async (instance, deviceId) => {
-						if (!deviceId) return
-
+					await executeActionIfHasDeviceId('start album/artist/playlist', async (instance, deviceId) => {
 						const context_uri_portion = await context.parseVariablesInString(String(action.options.context_uri))
 						const context_uri = `spotify:${action.options.type}:${context_uri_portion}`
 
@@ -133,8 +145,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 				if (typeof action.options.tracks === 'string') {
 					const tracks = action.options.tracks.split(',').map((track) => 'spotify:track:' + track.trim())
 
-					await executeAction(async (instance, deviceId) => {
-						if (deviceId) await PlaySpecificTracks(instance, deviceId, tracks, Number(action.options.positionMs) || 0)
+					await executeActionIfHasDeviceId('start track', async (instance, deviceId) => {
+						await PlaySpecificTracks(instance, deviceId, tracks, Number(action.options.positionMs) || 0)
 					})
 				}
 			},
@@ -143,62 +155,34 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			name: 'Pause Playback',
 			options: [],
 			callback: async () => {
-				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await ChangePlayState(instance, deviceId, 'pause')
+				await executeActionIfHasDeviceId('pause', async (instance, deviceId) => {
+					await ChangePlayState(instance, deviceId, 'pause')
 				})
 			},
 		},
 		[ActionId.VolumeUp]: {
 			name: 'Volume Up',
-			options: [
-				{
-					type: 'number',
-					label: 'Volume',
-					id: 'volumeUpAmount',
-					default: 5,
-					min: 0,
-					max: 100,
-					step: 1,
-				},
-			],
+			options: [{ type: 'number', label: 'Volume', id: 'volumeUpAmount', default: 5, min: 0, max: 100, step: 1 }],
 			callback: async (action) => {
-				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await ChangeVolume(instance, deviceId, false, Number(action.options.volumeUpAmount))
+				await executeActionIfHasDeviceId('volume up', async (instance, deviceId) => {
+					await ChangeVolume(instance, deviceId, false, Number(action.options.volumeUpAmount))
 				})
 			},
 		},
 		[ActionId.VolumeDown]: {
 			name: 'Volume Down',
-			options: [
-				{
-					type: 'number',
-					label: 'Volume',
-					id: 'volumeDownAmount',
-					default: 5,
-					min: 0,
-					max: 100,
-					step: 1,
-				},
-			],
+			options: [{ type: 'number', label: 'Volume', id: 'volumeDownAmount', default: 5, min: 0, max: 100, step: 1 }],
 			callback: async (action) => {
-				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await ChangeVolume(instance, deviceId, false, -Number(action.options.volumeDownAmount))
+				await executeActionIfHasDeviceId('volume down', async (instance, deviceId) => {
+					await ChangeVolume(instance, deviceId, false, -Number(action.options.volumeDownAmount))
 				})
 			},
 		},
 		[ActionId.VolumeSpecific]: {
 			name: 'Set Volume to Specific Value',
-			options: [
-				{
-					type: 'textinput',
-					label: 'Volume',
-					id: 'value',
-					default: '',
-					useVariables: true,
-				},
-			],
+			options: [{ type: 'textinput', label: 'Volume', id: 'value', default: '', useVariables: true }],
 			callback: async (action) => {
-				await executeAction(async (instance, deviceId) => {
+				await executeActionIfHasDeviceId('volume', async (instance, deviceId) => {
 					if (deviceId) {
 						const value = await instance.parseVariablesInString(String(action.options.value))
 
@@ -221,19 +205,12 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 		},
 		[ActionId.SeekPosition]: {
 			name: 'Seek To Position In Currently Playing Track',
-			options: [
-				{
-					type: 'textinput',
-					label: 'Position (milliseconds)',
-					id: 'position',
-					default: '',
-				},
-			],
+			options: [{ type: 'textinput', label: 'Position (milliseconds)', id: 'position', default: '' }],
 			callback: async (action) => {
 				if (typeof action.options.position === 'number') {
 					const positionMs = action.options.position
-					await executeAction(async (instance, deviceId) => {
-						if (deviceId) await SeekPosition(instance, deviceId, positionMs)
+					await executeActionIfHasDeviceId('seek', async (instance, deviceId) => {
+						await SeekPosition(instance, deviceId, positionMs)
 					})
 				}
 			},
@@ -242,8 +219,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			name: 'Skip Track',
 			options: [],
 			callback: async () => {
-				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await SkipSong(instance, deviceId)
+				await executeActionIfHasDeviceId('skip track', async (instance, deviceId) => {
+					await SkipSong(instance, deviceId)
 				})
 			},
 		},
@@ -251,8 +228,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			name: 'Previous Track',
 			options: [],
 			callback: async () => {
-				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await PreviousSong(instance, deviceId)
+				await executeActionIfHasDeviceId('previous track', async (instance, deviceId) => {
+					await PreviousSong(instance, deviceId)
 				})
 			},
 		},
@@ -260,8 +237,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			name: 'Toggle Shuffle',
 			options: [],
 			callback: async () => {
-				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await ChangeShuffleState(instance, deviceId, 'toggle')
+				await executeActionIfHasDeviceId('toggle shuffle', async (instance, deviceId) => {
+					await ChangeShuffleState(instance, deviceId, 'toggle')
 				})
 			},
 		},
@@ -269,8 +246,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			name: 'Turn Shuffle On',
 			options: [],
 			callback: async () => {
-				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await ChangeShuffleState(instance, deviceId, true)
+				await executeActionIfHasDeviceId('shuffle on', async (instance, deviceId) => {
+					await ChangeShuffleState(instance, deviceId, true)
 				})
 			},
 		},
@@ -278,8 +255,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			name: 'Turn Shuffle Off',
 			options: [],
 			callback: async () => {
-				await executeAction(async (instance, deviceId) => {
-					if (deviceId) await ChangeShuffleState(instance, deviceId, false)
+				await executeActionIfHasDeviceId('shuffle off', async (instance, deviceId) => {
+					await ChangeShuffleState(instance, deviceId, false)
 				})
 			},
 		},
@@ -292,26 +269,17 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					id: 'state',
 					default: 'off',
 					choices: [
-						{
-							id: 'off',
-							label: 'off',
-						},
-						{
-							id: 'context',
-							label: 'context',
-						},
-						{
-							id: 'track',
-							label: 'track',
-						},
+						{ id: 'off', label: 'off' },
+						{ id: 'context', label: 'context' },
+						{ id: 'track', label: 'track' },
 					],
 				},
 			],
 			callback: async (action) => {
 				if (typeof action.options.state === 'string') {
 					const target = action.options.state as any // TODO - typings
-					await executeAction(async (instance, deviceId) => {
-						if (deviceId) await ChangeRepeatState(instance, deviceId, target)
+					await executeActionIfHasDeviceId('rpeat', async (instance, deviceId) => {
+						await ChangeRepeatState(instance, deviceId, target)
 					})
 				}
 			},
@@ -333,20 +301,15 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 
 						// Invalidate all feedbacks, some of them have probably changed
 						instance.checkFeedbacks()
+					} else {
+						instance.log('warn', 'No active device found')
 					}
 				})
 			},
 		},
 		[ActionId.SwitchActiveDevice]: {
 			name: 'Change Active Device',
-			options: [
-				{
-					type: 'textinput',
-					label: 'Device ID',
-					id: 'deviceId',
-					default: '',
-				},
-			],
+			options: [{ type: 'textinput', label: 'Device ID', id: 'deviceId', default: '' }],
 			callback: async (action) => {
 				await executeAction(async (instance) => {
 					const targetId = action.options.deviceId
@@ -380,8 +343,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					const context_uri_portion = await context.parseVariablesInString(String(action.options.context_uri))
 					const context_uri = `spotify:track:${context_uri_portion}`
 
-					await executeAction(async (instance, deviceId) => {
-						if (deviceId) await QueueItem(instance, deviceId, context_uri)
+					await executeActionIfHasDeviceId('queue track', async (instance, deviceId) => {
+						await QueueItem(instance, deviceId, context_uri)
 					})
 				}
 			},
