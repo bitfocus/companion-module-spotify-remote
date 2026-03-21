@@ -114,7 +114,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 
 					await executeActionIfHasDeviceId('start album/artist/playlist', async (instance, deviceId) => {
 						const context_uri_portion = await context.parseVariablesInString(String(action.options.context_uri))
-						const context_uri = `spotify:${action.options.type}:${context_uri_portion}`
+						const context_uri = context_uri_portion.startsWith('spotify:')
+							? context_uri_portion
+							: `spotify:${action.options.type}:${context_uri_portion}`
 
 						await PlaySpecificList(instance, deviceId, context_uri, behavior)
 					})
@@ -143,7 +145,10 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			],
 			callback: async (action) => {
 				if (typeof action.options.tracks === 'string') {
-					const tracks = action.options.tracks.split(',').map((track) => 'spotify:track:' + track.trim())
+					const tracks = action.options.tracks.split(',').map((track) => {
+						const value = track.trim()
+						return value.startsWith('spotify:track') ? value : `spotify:track:${value}`
+					})
 
 					await executeActionIfHasDeviceId('start track', async (instance, deviceId) => {
 						await PlaySpecificTracks(instance, deviceId, tracks, Number(action.options.positionMs) || 0)
@@ -325,7 +330,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			callback: async (action, context) => {
 				if (typeof action.options.context_uri === 'string') {
 					const context_uri_portion = await context.parseVariablesInString(String(action.options.context_uri))
-					const context_uri = `spotify:track:${context_uri_portion}`
+					const context_uri = context_uri_portion.startsWith('spotify:track')
+						? context_uri_portion
+						: `spotify:track:${context_uri_portion}`
 
 					await executeActionIfHasDeviceId('queue track', async (instance, deviceId) => {
 						await QueueItem(instance, deviceId, context_uri)

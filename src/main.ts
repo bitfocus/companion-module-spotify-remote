@@ -250,7 +250,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 	}
 	// Set up Feedbacks
 	private initFeedbacks() {
-		const feedbacks = GetFeedbacksList(() => this.state)
+		const feedbacks = GetFeedbacksList(this, () => this.state)
 		this.setFeedbackDefinitions(feedbacks)
 	}
 	private initVariables() {
