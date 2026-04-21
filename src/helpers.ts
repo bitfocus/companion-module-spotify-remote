@@ -46,11 +46,11 @@ export async function ChangeVolume(
 		let newVolume = absolute ? volumeOrDelta : oldVolume + volumeOrDelta
 		if (newVolume < 0) newVolume = 0
 		if (newVolume > 100) newVolume = 100
+
+		await setVolume(reqOptions, newVolume, { deviceId })
 		instance.setVariableValues({
 			volume: newVolume,
 		})
-
-		await setVolume(reqOptions, newVolume, { deviceId })
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
