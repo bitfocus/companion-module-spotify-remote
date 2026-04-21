@@ -32,18 +32,25 @@ export async function ChangeVolume(
 	}
 
 	try {
-		const data = await getMyDevices(reqOptions)
-		const selectedDevice = data.body?.devices?.find((dev) => dev.id === deviceId)
-		// TODO - if dev.type == 'Tablet' || dev.type == 'Phone', then we can't do increments? or should that have been set the volume at all?
+		let oldVolume = Number(instance.getVariableValue('volume'))
+		if (isNaN(oldVolume)) {
+			const data = await getMyDevices(reqOptions)
+			const selectedDevice = data.body?.devices?.find((dev) => dev.id === deviceId)
+			// TODO - if dev.type == 'Tablet' || dev.type == 'Phone', then we can't do increments? or should that have been set the volume at all?
 
-		// Device doesn't look valid
-		if (!selectedDevice || typeof selectedDevice.volume_percent !== 'number') return
+			// Device doesn't look valid
+			if (!selectedDevice || typeof selectedDevice.volume_percent !== 'number') return
+			oldVolume = selectedDevice.volume_percent
+		}
 
-		let newVolume = absolute ? volumeOrDelta : selectedDevice.volume_percent + volumeOrDelta
+		let newVolume = absolute ? volumeOrDelta : oldVolume + volumeOrDelta
 		if (newVolume < 0) newVolume = 0
 		if (newVolume > 100) newVolume = 100
 
 		await setVolume(reqOptions, newVolume, { deviceId })
+		instance.setVariableValues({
+			volume: newVolume,
+		})
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
