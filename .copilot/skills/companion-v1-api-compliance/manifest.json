@@ -1,0 +1,11 @@
+{
+	"name": "companion-v1-api-compliance",
+	"version": "1.0.0",
+	"description": "Review @companion-module/base v1.x modules for required lifecycle behavior and version-specific compliance.",
+	"author": "Justin James",
+	"license": "MIT",
+	"platforms": ["github-copilot", "claude", "any-llm"],
+	"triggers": ["v1 api compliance", "base v1.x", "runEntrypoint", "legacy Companion module"],
+	"tags": ["companion", "bitfocus", "compliance", "v1-api"],
+	"capabilities": ["Audit legacy API usage", "Apply per-version compliance checks", "Recommend upgrade paths"]
+}

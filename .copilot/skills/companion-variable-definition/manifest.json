@@ -1,0 +1,11 @@
+{
+	"name": "companion-variable-definition",
+	"version": "1.0.0",
+	"description": "Declare and register Bitfocus Companion variables so they appear in the variable picker.",
+	"author": "Justin James",
+	"license": "MIT",
+	"platforms": ["github-copilot", "claude", "any-llm"],
+	"triggers": ["setVariableDefinitions", "declare variable", "variable picker", "dynamic variables"],
+	"tags": ["companion", "bitfocus", "variables", "api"],
+	"capabilities": ["Register variable definitions", "Design valid variable IDs", "Generate dynamic variable sets"]
+}

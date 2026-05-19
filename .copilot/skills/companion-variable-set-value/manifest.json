@@ -1,0 +1,11 @@
+{
+	"name": "companion-variable-set-value",
+	"version": "1.0.0",
+	"description": "Set and read Bitfocus Companion variable values at runtime after the variables are defined.",
+	"author": "Justin James",
+	"license": "MIT",
+	"platforms": ["github-copilot", "claude", "any-llm"],
+	"triggers": ["setVariableValues", "getVariableValue", "update variable state", "runtime variables"],
+	"tags": ["companion", "bitfocus", "variables", "runtime"],
+	"capabilities": ["Set variable values", "Read current variable state", "Handle partial variable updates safely"]
+}

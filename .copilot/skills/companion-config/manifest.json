@@ -1,0 +1,11 @@
+{
+	"name": "companion-config",
+	"version": "1.0.0",
+	"description": "Define and validate Bitfocus Companion configuration fields, defaults, and configUpdated behavior.",
+	"author": "Justin James",
+	"license": "MIT",
+	"platforms": ["github-copilot", "claude", "any-llm"],
+	"triggers": ["add config field", "connection settings", "configUpdated", "Companion config"],
+	"tags": ["companion", "bitfocus", "config", "api"],
+	"capabilities": ["Define config field arrays", "Validate user input", "Handle config updates safely"]
+}

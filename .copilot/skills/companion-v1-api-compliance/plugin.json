@@ -1,0 +1,11 @@
+{
+	"name": "companion-v1-api-compliance",
+	"description": "Review @companion-module/base v1.x modules for required lifecycle behavior and version-specific compliance.",
+	"version": "1.0.0",
+	"author": {
+		"name": "Justin James"
+	},
+	"license": "MIT",
+	"keywords": ["v1 api compliance", "base v1.x", "runEntrypoint", "legacy Companion module"],
+	"skills": "./"
+}

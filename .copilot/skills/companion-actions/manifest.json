@@ -1,0 +1,15 @@
+{
+	"name": "companion-actions",
+	"version": "1.0.0",
+	"description": "Implement Bitfocus Companion actions with typed definitions, options, callbacks, and lifecycle hooks.",
+	"author": "Justin James",
+	"license": "MIT",
+	"platforms": ["github-copilot", "claude", "any-llm"],
+	"triggers": ["add action", "button command", "action callback", "CompanionActionDefinition"],
+	"tags": ["companion", "bitfocus", "actions", "api"],
+	"capabilities": [
+		"Define Companion actions",
+		"Model action option fields",
+		"Handle callbacks and subscribe lifecycles"
+	]
+}

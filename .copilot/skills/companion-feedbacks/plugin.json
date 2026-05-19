@@ -1,0 +1,11 @@
+{
+	"name": "companion-feedbacks",
+	"description": "Implement Bitfocus Companion feedbacks for boolean styling, advanced rendering, and state-driven updates.",
+	"version": "1.0.0",
+	"author": {
+		"name": "Justin James"
+	},
+	"license": "MIT",
+	"keywords": ["add feedback", "button colors", "advanced feedback", "checkFeedbacks"],
+	"skills": "./"
+}

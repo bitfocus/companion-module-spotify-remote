@@ -1,0 +1,15 @@
+{
+	"name": "companion-feedbacks",
+	"version": "1.0.0",
+	"description": "Implement Bitfocus Companion feedbacks for boolean styling, advanced rendering, and state-driven updates.",
+	"author": "Justin James",
+	"license": "MIT",
+	"platforms": ["github-copilot", "claude", "any-llm"],
+	"triggers": ["add feedback", "button colors", "advanced feedback", "checkFeedbacks"],
+	"tags": ["companion", "bitfocus", "feedbacks", "api"],
+	"capabilities": [
+		"Define boolean feedbacks",
+		"Render advanced feedback output",
+		"Trigger feedback refreshes from state changes"
+	]
+}
