@@ -5,15 +5,21 @@
 	"type": "module",
 	"scripts": {
 		"postinstall": "husky",
-		"build": "rimraf dist && tsc -p tsconfig.build.json",
+		"format": "prettier -w .",
+		"package": "run build && companion-module-build",
+		"build": "rimraf dist && run build:main",
 		"build:main": "tsc -p tsconfig.build.json",
 		"dev": "tsc -p tsconfig.build.json --watch",
 		"lint:raw": "eslint",
 		"lint": "run lint:raw .",
 		"lint-fix": "run lint --fix"
 	},
-	"author": "Peter Stather",
 	"license": "MIT",
+		"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-spotify-remote.git"
+	},
+
 	"prettier": "@companion-module/tools/.prettierrc.json",
 	"lint-staged": {
 		"*.{css,json,md,scss}": [
