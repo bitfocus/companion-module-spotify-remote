@@ -22,11 +22,17 @@
 
 	"prettier": "@companion-module/tools/.prettierrc.json",
 	"lint-staged": {
-		"*.{css,json,md,scss}": [
+		"./*.{css,json,md,scss}": [
 			"prettier --write"
 		],
-		"*.{ts,tsx,js,jsx}": [
-			"run lint:raw --fix"
+		"!(.squad)/**/*.{css,json,md,scss}": [
+			"prettier --write"
+		],
+		"./*.{ts,tsx,js,jsx}": [
+			"yarn lint:raw --fix"
+		],
+		"!(.squad)/**/*.{ts,tsx,js,jsx}": [
+			"yarn lint:raw --fix"
 		]
 	},
 	"engines": {

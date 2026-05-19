@@ -1,5 +1,14 @@
 import { generateEslintConfig } from '@companion-module/tools/eslint/config.mjs'
 
-export default generateEslintConfig({
+const baseConfig = await generateEslintConfig({
 	enableTypescript: true,
 })
+
+const customConfig = [
+	{
+		ignores: ['.squad/**'],
+	},
+	...baseConfig,
+]
+
+export default customConfig
