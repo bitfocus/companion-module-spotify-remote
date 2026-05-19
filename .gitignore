@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .vscode/
+.idea/
 package-lock.json
 /pkg
 /*.tgz
