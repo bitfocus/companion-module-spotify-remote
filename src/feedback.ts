@@ -81,6 +81,7 @@ export function GetFeedbacksList(
 					type: 'textinput',
 					label: 'Device Name (case insensitive)',
 					id: 'device',
+					useVariables: true,
 				},
 			],
 			defaultStyle: {
@@ -101,6 +102,7 @@ export function GetFeedbacksList(
 					type: 'textinput',
 					label: 'Item ID',
 					id: 'id',
+					useVariables: true,
 				},
 			],
 			defaultStyle: {
