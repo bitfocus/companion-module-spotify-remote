@@ -1,5 +1,6 @@
 import { CompanionFeedbackDefinitions, CompanionFeedbackDefinition } from '@companion-module/base'
 import { SpotifyState } from './state.js'
+import { SpotifyInstanceBase } from './types.js'
 
 export enum FeedbackId {
 	IsPlaying = 'is-playing',
@@ -9,7 +10,10 @@ export enum FeedbackId {
 	CurrentContext = 'current-context',
 }
 
-export function GetFeedbacksList(getState: () => SpotifyState): CompanionFeedbackDefinitions {
+export function GetFeedbacksList(
+	instance: SpotifyInstanceBase,
+	getState: () => SpotifyState,
+): CompanionFeedbackDefinitions {
 	const feedbacks: { [id in FeedbackId]: CompanionFeedbackDefinition | undefined } = {
 		[FeedbackId.IsPlaying]: {
 			type: 'boolean',
@@ -77,6 +81,7 @@ export function GetFeedbacksList(getState: () => SpotifyState): CompanionFeedbac
 					type: 'textinput',
 					label: 'Device Name (case insensitive)',
 					id: 'device',
+					useVariables: true,
 				},
 			],
 			defaultStyle: {
@@ -97,13 +102,21 @@ export function GetFeedbacksList(getState: () => SpotifyState): CompanionFeedbac
 					type: 'textinput',
 					label: 'Item ID',
 					id: 'id',
+					useVariables: true,
 				},
 			],
 			defaultStyle: {
 				color: 0x000000,
 				bgcolor: 0x00ff00,
 			},
-			callback: (feedback): boolean => getState().playbackState?.currentContext == feedback.options.id,
+			callback: (feedback): boolean => {
+				const currentContext = getState().playbackState?.currentContext
+				instance.log(
+					'debug',
+					`Feedback check for current context. Feedback value: ${feedback.options.id}, Current context: ${JSON.stringify(currentContext)}`,
+				)
+				return currentContext == feedback.options.id
+			},
 		},
 	}
 
