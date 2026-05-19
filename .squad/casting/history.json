@@ -1,0 +1,16 @@
+{
+  "universe_usage_history": ["Firefly"],
+  "assignment_cast_snapshots": {
+    "2026-05-19": {
+      "assignment_id": "companion-module-spotify-remote-2026-05-19",
+      "universe": "Firefly",
+      "project": "companion-module-spotify-remote",
+      "agents": [
+        { "name": "mal", "role": "Lead" },
+        { "name": "kaylee", "role": "Module Dev" },
+        { "name": "wash", "role": "Backend Dev" },
+        { "name": "zoe", "role": "Tester" }
+      ]
+    }
+  }
+}
