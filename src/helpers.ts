@@ -353,6 +353,7 @@ export async function FadeVolume(
 					`FadeVolume step ${step}/${numSteps}: setting volume to ${nextVolume} (target=${clampedTarget}) (interval=${intervalMs}ms)`,
 				)
 				await setVolume(reqOptions, nextVolume, { deviceId })
+				instance.setVariableValues({ volume: nextVolume })
 			} catch (err) {
 				instance.log('warn', `FadeVolume step ${step} failed: ${err}`)
 			}
