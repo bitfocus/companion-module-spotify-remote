@@ -38,6 +38,8 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 
 	private pollTimer: NodeJS.Timeout | undefined
 
+	private activeVolumeAbort: AbortController | null = null
+
 	private readonly state: SpotifyState
 	private readonly pollQueue = new PQueue({ concurrency: 1 })
 
@@ -98,6 +100,12 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		} else {
 			return null
 		}
+	}
+
+	public startVolumeFade(): AbortSignal {
+		this.activeVolumeAbort?.abort()
+		this.activeVolumeAbort = new AbortController()
+		return this.activeVolumeAbort.signal
 	}
 
 	async configUpdated(config: DeviceConfig): Promise<void> {
@@ -224,6 +232,11 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		if (this.pollTimer) {
 			clearInterval(this.pollTimer)
 			delete this.pollTimer
+		}
+
+		if (this.activeVolumeAbort) {
+			this.activeVolumeAbort.abort()
+			this.activeVolumeAbort = null
 		}
 	}
 	getConfigFields(): SomeCompanionConfigField[] {

@@ -5,6 +5,7 @@ import {
 	ChangeRepeatState,
 	ChangeShuffleState,
 	ChangeVolume,
+	FadeVolume,
 	PlaySpecificList,
 	PlaySpecificTracks,
 	PreviousSong,
@@ -25,6 +26,7 @@ export enum ActionId {
 	VolumeUp = 'volumeUp',
 	VolumeDown = 'volumeDown',
 	VolumeSpecific = 'volumeSpecific',
+	FadeVolume = 'fadeVolume',
 	SeekPosition = 'seekPosition',
 	Skip = 'skip',
 	Previous = 'previous',
@@ -189,6 +191,42 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			callback: async (action) => {
 				await executeActionIfHasDeviceId('volume', async (instance, deviceId) => {
 					await ChangeVolume(instance, deviceId, true, Number(action.options.value))
+				})
+			},
+		},
+		[ActionId.FadeVolume]: {
+			name: 'Fade Volume',
+			options: [
+				{
+					type: 'number',
+					label: 'Target Volume',
+					id: 'targetVolume',
+					default: 50,
+					min: 0,
+					max: 100,
+					step: 1,
+				},
+				{
+					type: 'number',
+					label: 'Fade Duration (milliseconds)',
+					id: 'fadeDurationMs',
+					default: 5000,
+					min: 500,
+					max: 300000,
+					step: 500,
+				},
+			],
+			callback: async (action) => {
+				await executeActionIfHasDeviceId('fade volume', async (instance, deviceId) => {
+					// Fire and forget — do not await the full fade.
+					// Companion enforces a ~5s timeout on action callbacks; the fade runs
+					// in the background so longer fades are not cut short.
+					FadeVolume(
+						instance,
+						deviceId,
+						Number(action.options.targetVolume),
+						Number(action.options.fadeDurationMs),
+					).catch((err) => instance.log('warn', `FadeVolume failed: ${err}`))
 				})
 			},
 		},

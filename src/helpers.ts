@@ -1,3 +1,4 @@
+import { setIntervalAsync, clearIntervalAsync } from 'set-interval-async/dynamic'
 import { getMyDevices, setVolume } from './api/device.js'
 import {
 	addItemToQueue,
@@ -307,4 +308,59 @@ export async function PlaySpecificTracks(
 			throw err
 		}
 	}
+}
+
+const FADE_MIN_INTERVAL_MS = 500
+
+export async function FadeVolume(
+	instance: SpotifyInstanceBase,
+	deviceId: string,
+	targetVolume: number,
+	fadeDurationMs: number,
+): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
+	const clampedTarget = Math.max(0, Math.min(100, Math.round(targetVolume)))
+	const clampedDuration = Math.max(FADE_MIN_INTERVAL_MS, fadeDurationMs)
+
+	const numSteps = Math.max(1, Math.floor(clampedDuration / FADE_MIN_INTERVAL_MS))
+	const intervalMs = clampedDuration / numSteps
+
+	const startVolume = await GetCurrentVolume(instance, deviceId)
+	if (startVolume === clampedTarget) return
+
+	const signal = instance.startVolumeFade()
+	let step = 0
+
+	await new Promise<void>((resolve) => {
+		const timer = setIntervalAsync(async () => {
+			if (signal.aborted) {
+				await clearIntervalAsync(timer)
+				resolve()
+				return
+			}
+
+			step++
+			const isLast = step >= numSteps
+			const nextVolume = isLast
+				? clampedTarget
+				: Math.max(0, Math.min(100, Math.round(startVolume + ((clampedTarget - startVolume) * step) / numSteps)))
+
+			try {
+				instance.log(
+					'debug',
+					`FadeVolume step ${step}/${numSteps}: setting volume to ${nextVolume} (target=${clampedTarget}) (interval=${intervalMs}ms)`,
+				)
+				await setVolume(reqOptions, nextVolume, { deviceId })
+			} catch (err) {
+				instance.log('warn', `FadeVolume step ${step} failed: ${err}`)
+			}
+
+			if (isLast || signal.aborted) {
+				await clearIntervalAsync(timer)
+				resolve()
+			}
+		}, intervalMs)
+	})
 }
