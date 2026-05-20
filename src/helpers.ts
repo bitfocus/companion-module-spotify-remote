@@ -16,6 +16,24 @@ import { SpotifyInstanceBase } from './types.js'
 // Limit the number of retries that we do
 const MAX_ATTEMPTS = 5
 
+export async function GetCurrentVolume(instance: SpotifyInstanceBase, deviceId: string, attempt = 0): Promise<number> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return 0
+
+	try {
+		const data = await getMyDevices(reqOptions)
+		const selectedDevice = data.body?.devices?.find((dev) => dev.id === deviceId)
+		return selectedDevice?.volume_percent ?? 0
+	} catch (err) {
+		const retry = await instance.checkIfApiErrorShouldRetry(err)
+		if (retry && attempt <= MAX_ATTEMPTS) {
+			return GetCurrentVolume(instance, deviceId, attempt + 1)
+		} else {
+			throw err
+		}
+	}
+}
+
 export async function ChangeVolume(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
@@ -43,6 +61,10 @@ export async function ChangeVolume(
 		if (newVolume < 0) newVolume = 0
 		if (newVolume > 100) newVolume = 100
 
+		instance.log(
+			'debug',
+			`Changing volume from ${selectedDevice.volume_percent} to ${newVolume} (absolute=${absolute})`,
+		)
 		await setVolume(reqOptions, newVolume, { deviceId })
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
