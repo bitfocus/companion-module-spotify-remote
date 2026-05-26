@@ -24,7 +24,9 @@ export async function GetCurrentVolume(instance: SpotifyInstanceBase, deviceId: 
 	try {
 		const data = await getMyDevices(reqOptions)
 		const selectedDevice = data.body?.devices?.find((dev) => dev.id === deviceId)
-		return selectedDevice?.volume_percent ?? 0
+		const volume = selectedDevice?.volume_percent ?? 0
+		instance.setVariableValues({ volume: volume })
+		return volume
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
@@ -63,6 +65,7 @@ export async function ChangeVolume(
 		if (newVolume > 100) newVolume = 100
 
 		await setVolume(reqOptions, newVolume, { deviceId })
+		await GetCurrentVolume(instance, deviceId)
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
@@ -147,6 +150,10 @@ export async function ChangePlayState(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
 	action: 'play' | 'pause' | 'toggle',
+	fadeIn = false,
+	startVolume = 0,
+	targetVolume = 85,
+	fadeDurationMs = 5000,
 	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
@@ -156,14 +163,25 @@ export async function ChangePlayState(
 		const data = await getMyCurrentPlaybackState(reqOptions)
 
 		if ((action === 'pause' || action === 'toggle') && data.body?.is_playing) {
+			if (fadeIn) {
+				await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+			}
 			await pause(reqOptions, { deviceId })
 		} else if ((action === 'play' || action === 'toggle') && !data.body?.is_playing) {
+			if (fadeIn) {
+				await ChangeVolume(instance, deviceId, true, Number(startVolume))
+				await GetCurrentVolume(instance, deviceId)
+			}
 			await play(reqOptions, { deviceId })
+
+			if (fadeIn) {
+				await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+			}
 		}
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
-			return ChangePlayState(instance, deviceId, action, attempt + 1)
+			return ChangePlayState(instance, deviceId, action, fadeIn, startVolume, targetVolume, fadeDurationMs, attempt + 1)
 		} else {
 			throw err
 		}
@@ -248,6 +266,10 @@ export async function PlaySpecificList(
 	deviceId: string,
 	context_uri: string,
 	behavior: 'return' | 'resume' | 'force',
+	fadeIn = false,
+	startVolume = 0,
+	targetVolume = 85,
+	fadeDurationMs = 5000,
 	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
@@ -260,20 +282,45 @@ export async function PlaySpecificList(
 				if (behavior == 'return' || (behavior == 'resume' && data.body.is_playing)) {
 					instance.log('warn', `Already playing that ${context_uri}`)
 				} else if (behavior == 'resume') {
+					if (fadeIn) {
+						await ChangeVolume(instance, deviceId, true, Number(startVolume))
+						await GetCurrentVolume(instance, deviceId)
+					}
 					await play(reqOptions, { deviceId })
+					if (fadeIn) {
+						await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+					}
 				}
 
 				return
 			}
 		}
+
+		if (fadeIn) {
+			await ChangeVolume(instance, deviceId, true, Number(startVolume))
+			await GetCurrentVolume(instance, deviceId)
+		}
 		await play(reqOptions, {
 			deviceId,
 			context_uri,
 		})
+		if (fadeIn) {
+			await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+		}
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
-			return PlaySpecificList(instance, deviceId, context_uri, behavior, attempt + 1)
+			return PlaySpecificList(
+				instance,
+				deviceId,
+				context_uri,
+				behavior,
+				fadeIn,
+				startVolume,
+				targetVolume,
+				fadeDurationMs,
+				attempt + 1,
+			)
 		} else {
 			throw err
 		}
@@ -285,21 +332,44 @@ export async function PlaySpecificTracks(
 	deviceId: string,
 	uris: string[],
 	positionMs: number,
+	fadeIn = false,
+	startVolume = 0,
+	targetVolume = 85,
+	fadeDurationMs = 5000,
 	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
 
 	try {
+		if (fadeIn) {
+			await ChangeVolume(instance, deviceId, true, Number(startVolume))
+			await GetCurrentVolume(instance, deviceId)
+		}
+
 		await play(reqOptions, {
 			deviceId: deviceId,
 			uris: uris,
 			position_ms: positionMs,
 		})
+
+		if (fadeIn) {
+			await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+		}
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
-			return PlaySpecificTracks(instance, deviceId, uris, positionMs, attempt + 1)
+			return PlaySpecificTracks(
+				instance,
+				deviceId,
+				uris,
+				positionMs,
+				fadeIn,
+				startVolume,
+				targetVolume,
+				fadeDurationMs,
+				attempt + 1,
+			)
 		} else {
 			throw err
 		}

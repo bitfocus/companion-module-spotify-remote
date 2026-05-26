@@ -3,7 +3,13 @@ import { DeviceConfig } from './config.js'
 import { FeedbackId } from './feedback.js'
 import { ActionId } from './actions.js'
 
-const FADE_IN_ACTION_IDS = new Set<string>([ActionId.Play, ActionId.PlaySpecificList, ActionId.PlaySpecificTracks])
+const FADE_IN_ACTION_IDS = new Set<string>([
+	ActionId.Play,
+	ActionId.PlaySpecificList,
+	ActionId.PlaySpecificTracks,
+	ActionId.Pause,
+	ActionId.PlayPause,
+])
 
 const AddFadeInOptionsUpgradeScript: CompanionStaticUpgradeScript<DeviceConfig> = (_context, props) => {
 	const updatedActions: typeof props.actions = []
