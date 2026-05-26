@@ -18,6 +18,10 @@ const AddFadeInOptionsUpgradeScript: CompanionStaticUpgradeScript<DeviceConfig> 
 		if (!FADE_IN_ACTION_IDS.has(action.actionId)) continue
 
 		let changed = false
+		if (!('fadeOut' in action.options)) {
+			action.options['fadeOut'] = false
+			changed = true
+		}
 		if (!('fadeIn' in action.options)) {
 			action.options['fadeIn'] = false
 			changed = true

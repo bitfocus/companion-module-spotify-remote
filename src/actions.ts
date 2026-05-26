@@ -63,13 +63,19 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			options: [
 				{
 					type: 'checkbox',
-					label: 'Fade In Volume',
+					label: 'Fade Out Volume on Pause',
+					id: 'fadeOut',
+					default: false,
+				},
+				{
+					type: 'checkbox',
+					label: 'Fade In Volume on Play',
 					id: 'fadeIn',
 					default: false,
 				},
 				{
 					type: 'number',
-					label: 'Start Volume',
+					label: 'Start Volume for Fade In',
 					id: 'startVolume',
 					default: 0,
 					min: 0,
@@ -79,7 +85,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 				},
 				{
 					type: 'number',
-					label: 'Target Volume',
+					label: 'Target Volume for Fade In',
 					id: 'targetVolume',
 					default: 85,
 					min: 0,
@@ -95,7 +101,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					min: 500,
 					max: 300000,
 					step: 500,
-					isVisible: (options) => options.fadeIn === true,
+					isVisible: (options) => options.fadeIn === true || options.fadeOut === true,
 				},
 			],
 			callback: async (action) => {
@@ -104,6 +110,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						instance,
 						deviceId,
 						'toggle',
+						action.options.fadeOut as boolean,
 						action.options.fadeIn as boolean,
 						Number(action.options.startVolume),
 						Number(action.options.targetVolume),
@@ -158,6 +165,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						instance,
 						deviceId,
 						'play',
+						false,
 						action.options.fadeIn as boolean,
 						Number(action.options.startVolume),
 						Number(action.options.targetVolume),
@@ -343,29 +351,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			options: [
 				{
 					type: 'checkbox',
-					label: 'Fade In Volume',
-					id: 'fadeIn',
+					label: 'Fade Out Volume',
+					id: 'fadeOut',
 					default: false,
-				},
-				{
-					type: 'number',
-					label: 'Start Volume',
-					id: 'startVolume',
-					default: 0,
-					min: 0,
-					max: 100,
-					step: 1,
-					isVisible: (options) => options.fadeIn === true,
-				},
-				{
-					type: 'number',
-					label: 'Target Volume',
-					id: 'targetVolume',
-					default: 85,
-					min: 0,
-					max: 100,
-					step: 1,
-					isVisible: (options) => options.fadeIn === true,
 				},
 				{
 					type: 'number',
@@ -384,9 +372,11 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						instance,
 						deviceId,
 						'pause',
-						action.options.fadeIn as boolean,
-						Number(action.options.startVolume),
-						Number(action.options.targetVolume),
+						action.options.fadeOut as boolean,
+						false,
+						0,
+						0,
+						0,
 						Number(action.options.fadeDurationMs),
 					).catch((err) => instance.log('warn', `Pause failed: ${err}`))
 				})

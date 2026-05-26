@@ -150,6 +150,7 @@ export async function ChangePlayState(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
 	action: 'play' | 'pause' | 'toggle',
+	fadeOut = false,
 	fadeIn = false,
 	startVolume = 0,
 	targetVolume = 85,
@@ -163,8 +164,8 @@ export async function ChangePlayState(
 		const data = await getMyCurrentPlaybackState(reqOptions)
 
 		if ((action === 'pause' || action === 'toggle') && data.body?.is_playing) {
-			if (fadeIn) {
-				await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+			if (fadeOut) {
+				await FadeVolume(instance, deviceId, 0, Number(fadeDurationMs))
 			}
 			await pause(reqOptions, { deviceId })
 		} else if ((action === 'play' || action === 'toggle') && !data.body?.is_playing) {
@@ -181,7 +182,17 @@ export async function ChangePlayState(
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
-			return ChangePlayState(instance, deviceId, action, fadeIn, startVolume, targetVolume, fadeDurationMs, attempt + 1)
+			return ChangePlayState(
+				instance,
+				deviceId,
+				action,
+				fadeOut,
+				fadeIn,
+				startVolume,
+				targetVolume,
+				fadeDurationMs,
+				attempt + 1,
+			)
 		} else {
 			throw err
 		}
