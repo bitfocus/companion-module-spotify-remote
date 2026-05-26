@@ -62,10 +62,6 @@ export async function ChangeVolume(
 		if (newVolume < 0) newVolume = 0
 		if (newVolume > 100) newVolume = 100
 
-		instance.log(
-			'debug',
-			`Changing volume from ${selectedDevice.volume_percent} to ${newVolume} (absolute=${absolute})`,
-		)
 		await setVolume(reqOptions, newVolume, { deviceId })
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
@@ -348,10 +344,6 @@ export async function FadeVolume(
 				: Math.max(0, Math.min(100, Math.round(startVolume + ((clampedTarget - startVolume) * step) / numSteps)))
 
 			try {
-				instance.log(
-					'debug',
-					`FadeVolume step ${step}/${numSteps}: setting volume to ${nextVolume} (target=${clampedTarget}) (interval=${intervalMs}ms)`,
-				)
 				await setVolume(reqOptions, nextVolume, { deviceId })
 				instance.setVariableValues({ volume: nextVolume })
 			} catch (err) {
