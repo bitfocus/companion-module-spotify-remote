@@ -1,3 +1,4 @@
+import { setIntervalAsync, clearIntervalAsync } from 'set-interval-async/dynamic'
 import { getMyDevices, setVolume } from './api/device.js'
 import {
 	addItemToQueue,
@@ -15,6 +16,26 @@ import { SpotifyInstanceBase } from './types.js'
 
 // Limit the number of retries that we do
 const MAX_ATTEMPTS = 5
+
+export async function GetCurrentVolume(instance: SpotifyInstanceBase, deviceId: string, attempt = 0): Promise<number> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return 0
+
+	try {
+		const data = await getMyDevices(reqOptions)
+		const selectedDevice = data.body?.devices?.find((dev) => dev.id === deviceId)
+		const volume = selectedDevice?.volume_percent ?? 0
+		instance.setVariableValues({ volume: volume })
+		return volume
+	} catch (err) {
+		const retry = await instance.checkIfApiErrorShouldRetry(err)
+		if (retry && attempt <= MAX_ATTEMPTS) {
+			return GetCurrentVolume(instance, deviceId, attempt + 1)
+		} else {
+			throw err
+		}
+	}
+}
 
 export async function ChangeVolume(
 	instance: SpotifyInstanceBase,
@@ -44,6 +65,7 @@ export async function ChangeVolume(
 		if (newVolume > 100) newVolume = 100
 
 		await setVolume(reqOptions, newVolume, { deviceId })
+		await GetCurrentVolume(instance, deviceId)
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
@@ -128,6 +150,11 @@ export async function ChangePlayState(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
 	action: 'play' | 'pause' | 'toggle',
+	fadeOut = false,
+	fadeIn = false,
+	startVolume = 0,
+	targetVolume = 85,
+	fadeDurationMs = 5000,
 	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
@@ -137,14 +164,35 @@ export async function ChangePlayState(
 		const data = await getMyCurrentPlaybackState(reqOptions)
 
 		if ((action === 'pause' || action === 'toggle') && data.body?.is_playing) {
+			if (fadeOut) {
+				await FadeVolume(instance, deviceId, 0, Number(fadeDurationMs))
+			}
 			await pause(reqOptions, { deviceId })
 		} else if ((action === 'play' || action === 'toggle') && !data.body?.is_playing) {
+			if (fadeIn) {
+				await ChangeVolume(instance, deviceId, true, Number(startVolume))
+				await GetCurrentVolume(instance, deviceId)
+			}
 			await play(reqOptions, { deviceId })
+
+			if (fadeIn) {
+				await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+			}
 		}
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
-			return ChangePlayState(instance, deviceId, action, attempt + 1)
+			return ChangePlayState(
+				instance,
+				deviceId,
+				action,
+				fadeOut,
+				fadeIn,
+				startVolume,
+				targetVolume,
+				fadeDurationMs,
+				attempt + 1,
+			)
 		} else {
 			throw err
 		}
@@ -229,6 +277,10 @@ export async function PlaySpecificList(
 	deviceId: string,
 	context_uri: string,
 	behavior: 'return' | 'resume' | 'force',
+	fadeIn = false,
+	startVolume = 0,
+	targetVolume = 85,
+	fadeDurationMs = 5000,
 	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
@@ -241,20 +293,45 @@ export async function PlaySpecificList(
 				if (behavior == 'return' || (behavior == 'resume' && data.body.is_playing)) {
 					instance.log('warn', `Already playing that ${context_uri}`)
 				} else if (behavior == 'resume') {
+					if (fadeIn) {
+						await ChangeVolume(instance, deviceId, true, Number(startVolume))
+						await GetCurrentVolume(instance, deviceId)
+					}
 					await play(reqOptions, { deviceId })
+					if (fadeIn) {
+						await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+					}
 				}
 
 				return
 			}
 		}
+
+		if (fadeIn) {
+			await ChangeVolume(instance, deviceId, true, Number(startVolume))
+			await GetCurrentVolume(instance, deviceId)
+		}
 		await play(reqOptions, {
 			deviceId,
 			context_uri,
 		})
+		if (fadeIn) {
+			await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+		}
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
-			return PlaySpecificList(instance, deviceId, context_uri, behavior, attempt + 1)
+			return PlaySpecificList(
+				instance,
+				deviceId,
+				context_uri,
+				behavior,
+				fadeIn,
+				startVolume,
+				targetVolume,
+				fadeDurationMs,
+				attempt + 1,
+			)
 		} else {
 			throw err
 		}
@@ -266,23 +343,98 @@ export async function PlaySpecificTracks(
 	deviceId: string,
 	uris: string[],
 	positionMs: number,
+	fadeIn = false,
+	startVolume = 0,
+	targetVolume = 85,
+	fadeDurationMs = 5000,
 	attempt = 0,
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
 
 	try {
+		if (fadeIn) {
+			await ChangeVolume(instance, deviceId, true, Number(startVolume))
+			await GetCurrentVolume(instance, deviceId)
+		}
+
 		await play(reqOptions, {
 			deviceId: deviceId,
 			uris: uris,
 			position_ms: positionMs,
 		})
+
+		if (fadeIn) {
+			await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+		}
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
-			return PlaySpecificTracks(instance, deviceId, uris, positionMs, attempt + 1)
+			return PlaySpecificTracks(
+				instance,
+				deviceId,
+				uris,
+				positionMs,
+				fadeIn,
+				startVolume,
+				targetVolume,
+				fadeDurationMs,
+				attempt + 1,
+			)
 		} else {
 			throw err
 		}
 	}
+}
+
+const FADE_MIN_INTERVAL_MS = 500
+
+export async function FadeVolume(
+	instance: SpotifyInstanceBase,
+	deviceId: string,
+	targetVolume: number,
+	fadeDurationMs: number,
+): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
+	const clampedTarget = Math.max(0, Math.min(100, Math.round(targetVolume)))
+	const clampedDuration = Math.max(FADE_MIN_INTERVAL_MS, fadeDurationMs)
+
+	const numSteps = Math.max(1, Math.floor(clampedDuration / FADE_MIN_INTERVAL_MS))
+	const intervalMs = clampedDuration / numSteps
+
+	const startVolume = await GetCurrentVolume(instance, deviceId)
+	if (startVolume === clampedTarget) return
+
+	const signal = instance.startVolumeFade()
+	let step = 0
+
+	await new Promise<void>((resolve) => {
+		const timer = setIntervalAsync(async () => {
+			if (signal.aborted) {
+				await clearIntervalAsync(timer)
+				resolve()
+				return
+			}
+
+			step++
+			const isLast = step >= numSteps
+			const nextVolume = isLast
+				? clampedTarget
+				: Math.max(0, Math.min(100, Math.round(startVolume + ((clampedTarget - startVolume) * step) / numSteps)))
+
+			try {
+				await setVolume(reqOptions, nextVolume, { deviceId })
+				instance.setVariableValues({ volume: nextVolume })
+			} catch (err) {
+				instance.log('warn', `FadeVolume step ${step} failed: ${err}`)
+			}
+
+			if (isLast || signal.aborted) {
+				await clearIntervalAsync(timer)
+				resolve()
+			}
+		}, intervalMs)
+	})
 }

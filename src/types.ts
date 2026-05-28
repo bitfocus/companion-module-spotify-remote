@@ -13,6 +13,8 @@ export interface SpotifyInstanceBase extends InstanceBase<DeviceConfig> {
 
 	getRequestOptionsBase(): RequestOptionsBase | null
 
+	startVolumeFade(): AbortSignal
+
 	// /** Queue a poll for playback status */
 	// queuePoll(): void
 }
