@@ -15,11 +15,10 @@
 		"lint-fix": "run lint --fix"
 	},
 	"license": "MIT",
-		"repository": {
+	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/bitfocus/companion-module-spotify-remote.git"
 	},
-
 	"prettier": "@companion-module/tools/.prettierrc.json",
 	"lint-staged": {
 		"*.{css,json,md,scss}": [
