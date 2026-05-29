@@ -28,6 +28,8 @@ export enum ActionId {
 	VolumeSpecific = 'volumeSpecific',
 	FadeVolume = 'fadeVolume',
 	SeekPosition = 'seekPosition',
+	SeekPositionBack = 'seekPositionBack',
+	SeekPositionForward = 'seekPositionForward',
 	Skip = 'skip',
 	Previous = 'previous',
 	ShuffleToggle = 'shuffleToggle',
@@ -442,12 +444,42 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 				})
 			},
 		},
+		[ActionId.SeekPositionBack]: {
+			name: 'Go Backwards X Milliseconds In Currently Playing Track',
+			options: [{ type: 'textinput', label: 'Position (milliseconds)', id: 'position', default: '' }],
+			callback: async (action) => {
+				const positionMs = Number(action.options.position)
+				if (!isNaN(positionMs)) {
+					await executeActionIfHasDeviceId('seek', async (instance, deviceId) => {
+						const currentPositionVariable = instance.getVariableValue('songProgressSeconds')
+						const currentPosition = !isNaN(Number(currentPositionVariable)) ? Number(currentPositionVariable) * 1000 : 0
+						const seekToPosition = Math.max(0, currentPosition - positionMs)
+						await SeekPosition(instance, deviceId, seekToPosition)
+					})
+				}
+			},
+		},
+		[ActionId.SeekPositionForward]: {
+			name: 'Go Forward X Milliseconds In Currently Playing Track',
+			options: [{ type: 'textinput', label: 'Position (milliseconds)', id: 'position', default: '' }],
+			callback: async (action) => {
+				const positionMs = Number(action.options.position)
+				if (!isNaN(positionMs)) {
+					await executeActionIfHasDeviceId('seek', async (instance, deviceId) => {
+						const currentPositionVariable = instance.getVariableValue('songProgressSeconds')
+						const currentPosition = !isNaN(Number(currentPositionVariable)) ? Number(currentPositionVariable) * 1000 : 0
+						const seekToPosition = Math.max(0, currentPosition + positionMs)
+						await SeekPosition(instance, deviceId, seekToPosition)
+					})
+				}
+			},
+		},
 		[ActionId.SeekPosition]: {
 			name: 'Seek To Position In Currently Playing Track',
 			options: [{ type: 'textinput', label: 'Position (milliseconds)', id: 'position', default: '' }],
 			callback: async (action) => {
-				if (typeof action.options.position === 'number') {
-					const positionMs = action.options.position
+				const positionMs = Number(action.options.position)
+				if (!isNaN(positionMs)) {
 					await executeActionIfHasDeviceId('seek', async (instance, deviceId) => {
 						await SeekPosition(instance, deviceId, positionMs)
 					})
