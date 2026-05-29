@@ -51,6 +51,8 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		this.config = { ...DEFAULT_CONFIG }
 	}
 
+	premuteVolume: number = 50
+
 	public async checkIfApiErrorShouldRetry(err: any): Promise<boolean> {
 		// Error Code 401 represents out of date token
 		if ('statusCode' in err && err.statusCode == '401') {
@@ -290,6 +292,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 			},
 			{ variableId: 'deviceName', name: 'Current device name' },
 			{ variableId: 'deviceId', name: 'Current device id' },
+			{ variableId: 'premuteVolume', name: 'Volume before mute' },
 		]
 
 		this.setVariableDefinitions(variables)
@@ -408,7 +411,6 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		// Collect updates for batch saving
 		const invalidatedFeedbacks: FeedbackId[] = []
 		const variableUpdates: { [variableId: string]: string | number | boolean | undefined } = {} // TODO - type of this
-
 		if (forceUpdate || oldState?.isPlaying !== newState?.isPlaying) {
 			variableUpdates['isPlaying'] = !!newState?.isPlaying
 			variableUpdates['isPlayingIcon'] = newState?.isPlaying ? '\u23F5' : '\u23F9'

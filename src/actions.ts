@@ -38,6 +38,9 @@ export enum ActionId {
 	RepeatState = 'repeatState',
 	ActiveDeviceToConfig = 'activeDeviceToConfig',
 	SwitchActiveDevice = 'switchActiveDevice',
+	Mute = 'mute',
+	Unmute = 'unmute',
+	MuteToggle = 'muteToggle',
 }
 
 export type DoAction = (instance: SpotifyInstanceBase, deviceId: string | null) => Promise<void>
@@ -620,6 +623,47 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						await QueueItem(instance, deviceId, context_uri)
 					})
 				}
+			},
+		},
+		[ActionId.Mute]: {
+			name: 'Mute Volume',
+			description: 'Mute the volume, saving the current volume to restore on unmute',
+			options: [],
+			callback: async () => {
+				await executeActionIfHasDeviceId('mute', async (instance, deviceId) => {
+					const currentVolume = Number(instance.getVariableValue('volume'))
+					instance.premuteVolume = !isNaN(currentVolume) ? currentVolume : instance.premuteVolume
+					instance.setVariableValues({ premuteVolume: instance.premuteVolume })
+					await ChangeVolume(instance, deviceId, true, 0)
+				})
+			},
+		},
+		[ActionId.Unmute]: {
+			name: 'Unmute Volume',
+			description: 'Unmute the volume, restoring the volume to the value before mute',
+			options: [],
+			callback: async () => {
+				await executeActionIfHasDeviceId('unmute', async (instance, deviceId) => {
+					const premuteVolume = instance.premuteVolume
+					await ChangeVolume(instance, deviceId, true, premuteVolume)
+				})
+			},
+		},
+		[ActionId.MuteToggle]: {
+			name: 'Toggle Mute Volume',
+			description: 'Toggle mute/unmute the volume, saving/restoring the current volume',
+			options: [],
+			callback: async () => {
+				await executeActionIfHasDeviceId('mute toggle', async (instance, deviceId) => {
+					const currentVolume = Number(instance.getVariableValue('volume'))
+					instance.setVariableValues({ premuteVolume: instance.premuteVolume })
+					if (!isNaN(currentVolume) && currentVolume > 0) {
+						instance.premuteVolume = currentVolume
+						await ChangeVolume(instance, deviceId, true, 0)
+					} else {
+						await ChangeVolume(instance, deviceId, true, instance.premuteVolume)
+					}
+				})
 			},
 		},
 	}
