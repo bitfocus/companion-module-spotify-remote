@@ -368,7 +368,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					min: 500,
 					max: 300000,
 					step: 500,
-					isVisible: (options) => options.fadeIn === true,
+					isVisible: (options) => options.fadeOut === true,
 				},
 			],
 			callback: async (action) => {
@@ -379,7 +379,6 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						'pause',
 						action.options.fadeOut as boolean,
 						false,
-						0,
 						0,
 						0,
 						Number(action.options.fadeDurationMs),
