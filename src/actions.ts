@@ -655,9 +655,9 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 			callback: async () => {
 				await executeActionIfHasDeviceId('mute toggle', async (instance, deviceId) => {
 					const currentVolume = Number(instance.getVariableValue('volume'))
-					instance.setVariableValues({ premuteVolume: instance.premuteVolume })
 					if (!isNaN(currentVolume) && currentVolume > 0) {
 						instance.premuteVolume = currentVolume
+						instance.setVariableValues({ premuteVolume: instance.premuteVolume })
 						await ChangeVolume(instance, deviceId, true, 0)
 					} else {
 						await ChangeVolume(instance, deviceId, true, instance.premuteVolume)
