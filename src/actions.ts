@@ -5,6 +5,7 @@ import {
 	ChangeRepeatState,
 	ChangeShuffleState,
 	ChangeVolume,
+	FadeVolume,
 	PlaySpecificList,
 	PlaySpecificTracks,
 	PreviousSong,
@@ -25,7 +26,10 @@ export enum ActionId {
 	VolumeUp = 'volumeUp',
 	VolumeDown = 'volumeDown',
 	VolumeSpecific = 'volumeSpecific',
+	FadeVolume = 'fadeVolume',
 	SeekPosition = 'seekPosition',
+	SeekPositionBack = 'seekPositionBack',
+	SeekPositionForward = 'seekPositionForward',
 	Skip = 'skip',
 	Previous = 'previous',
 	ShuffleToggle = 'shuffleToggle',
@@ -34,6 +38,9 @@ export enum ActionId {
 	RepeatState = 'repeatState',
 	ActiveDeviceToConfig = 'activeDeviceToConfig',
 	SwitchActiveDevice = 'switchActiveDevice',
+	Mute = 'mute',
+	Unmute = 'unmute',
+	MuteToggle = 'muteToggle',
 }
 
 export type DoAction = (instance: SpotifyInstanceBase, deviceId: string | null) => Promise<void>
@@ -58,19 +65,117 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 	const actions: { [id in ActionId]: CompanionActionDefinition | undefined } = {
 		[ActionId.PlayPause]: {
 			name: 'Toggle Play/Pause',
-			options: [],
-			callback: async () => {
+			options: [
+				{
+					type: 'checkbox',
+					label: 'Fade Out Volume on Pause',
+					id: 'fadeOut',
+					default: false,
+				},
+				{
+					type: 'checkbox',
+					label: 'Fade In Volume on Play',
+					id: 'fadeIn',
+					default: false,
+				},
+				{
+					type: 'number',
+					label: 'Start Volume for Fade In',
+					id: 'startVolume',
+					default: 0,
+					min: 0,
+					max: 100,
+					step: 1,
+					isVisible: (options) => options.fadeIn === true,
+				},
+				{
+					type: 'number',
+					label: 'Target Volume for Fade In',
+					id: 'targetVolume',
+					default: 85,
+					min: 0,
+					max: 100,
+					step: 1,
+					isVisible: (options) => options.fadeIn === true,
+				},
+				{
+					type: 'number',
+					label: 'Fade Duration (milliseconds)',
+					id: 'fadeDurationMs',
+					default: 5000,
+					min: 500,
+					max: 300000,
+					step: 500,
+					isVisible: (options) => options.fadeIn === true || options.fadeOut === true,
+				},
+			],
+			callback: async (action) => {
 				await executeActionIfHasDeviceId('play/pause', async (instance, deviceId) => {
-					await ChangePlayState(instance, deviceId, 'toggle')
+					ChangePlayState(
+						instance,
+						deviceId,
+						'toggle',
+						action.options.fadeOut as boolean,
+						action.options.fadeIn as boolean,
+						Number(action.options.startVolume),
+						Number(action.options.targetVolume),
+						Number(action.options.fadeDurationMs),
+					).catch((err) => instance.log('warn', `Play Toggle failed: ${err}`))
 				})
 			},
 		},
 		[ActionId.Play]: {
 			name: 'Play',
-			options: [],
-			callback: async () => {
+			options: [
+				{
+					type: 'checkbox',
+					label: 'Fade In Volume',
+					id: 'fadeIn',
+					default: false,
+				},
+				{
+					type: 'number',
+					label: 'Start Volume',
+					id: 'startVolume',
+					default: 0,
+					min: 0,
+					max: 100,
+					step: 1,
+					isVisible: (options) => options.fadeIn === true,
+				},
+				{
+					type: 'number',
+					label: 'Target Volume',
+					id: 'targetVolume',
+					default: 85,
+					min: 0,
+					max: 100,
+					step: 1,
+					isVisible: (options) => options.fadeIn === true,
+				},
+				{
+					type: 'number',
+					label: 'Fade Duration (milliseconds)',
+					id: 'fadeDurationMs',
+					default: 5000,
+					min: 500,
+					max: 300000,
+					step: 500,
+					isVisible: (options) => options.fadeIn === true,
+				},
+			],
+			callback: async (action) => {
 				await executeActionIfHasDeviceId('play', async (instance, deviceId) => {
-					await ChangePlayState(instance, deviceId, 'play')
+					ChangePlayState(
+						instance,
+						deviceId,
+						'play',
+						false,
+						action.options.fadeIn as boolean,
+						Number(action.options.startVolume),
+						Number(action.options.targetVolume),
+						Number(action.options.fadeDurationMs),
+					).catch((err) => instance.log('warn', `Play failed: ${err}`))
 				})
 			},
 		},
@@ -107,6 +212,42 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						{ id: 'force', label: 'Force Play (from start)' },
 					],
 				},
+				{
+					type: 'checkbox',
+					label: 'Fade In Volume',
+					id: 'fadeIn',
+					default: false,
+				},
+				{
+					type: 'number',
+					label: 'Start Volume',
+					id: 'startVolume',
+					default: 0,
+					min: 0,
+					max: 100,
+					step: 1,
+					isVisible: (options) => options.fadeIn === true,
+				},
+				{
+					type: 'number',
+					label: 'Target Volume',
+					id: 'targetVolume',
+					default: 85,
+					min: 0,
+					max: 100,
+					step: 1,
+					isVisible: (options) => options.fadeIn === true,
+				},
+				{
+					type: 'number',
+					label: 'Fade Duration (milliseconds)',
+					id: 'fadeDurationMs',
+					default: 5000,
+					min: 500,
+					max: 300000,
+					step: 500,
+					isVisible: (options) => options.fadeIn === true,
+				},
 			],
 			callback: async (action, context) => {
 				if (action.options.type && action.options.context_uri && typeof action.options.behavior === 'string') {
@@ -118,7 +259,16 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 							? context_uri_portion
 							: `spotify:${action.options.type}:${context_uri_portion}`
 
-						await PlaySpecificList(instance, deviceId, context_uri, behavior)
+						PlaySpecificList(
+							instance,
+							deviceId,
+							context_uri,
+							behavior,
+							action.options.fadeIn as boolean,
+							Number(action.options.startVolume),
+							Number(action.options.targetVolume),
+							Number(action.options.fadeDurationMs),
+						).catch((err) => instance.log('warn', `PlaySpecificList failed: ${err}`))
 					})
 				}
 			},
@@ -142,6 +292,42 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					min: 0,
 					max: 1000000,
 				},
+				{
+					type: 'checkbox',
+					label: 'Fade In Volume',
+					id: 'fadeIn',
+					default: false,
+				},
+				{
+					type: 'number',
+					label: 'Start Volume',
+					id: 'startVolume',
+					default: 0,
+					min: 0,
+					max: 100,
+					step: 1,
+					isVisible: (options) => options.fadeIn === true,
+				},
+				{
+					type: 'number',
+					label: 'Target Volume',
+					id: 'targetVolume',
+					default: 85,
+					min: 0,
+					max: 100,
+					step: 1,
+					isVisible: (options) => options.fadeIn === true,
+				},
+				{
+					type: 'number',
+					label: 'Fade Duration (milliseconds)',
+					id: 'fadeDurationMs',
+					default: 5000,
+					min: 500,
+					max: 300000,
+					step: 500,
+					isVisible: (options) => options.fadeIn === true,
+				},
 			],
 			callback: async (action) => {
 				if (typeof action.options.tracks === 'string') {
@@ -151,17 +337,52 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					})
 
 					await executeActionIfHasDeviceId('start track', async (instance, deviceId) => {
-						await PlaySpecificTracks(instance, deviceId, tracks, Number(action.options.positionMs) || 0)
+						PlaySpecificTracks(
+							instance,
+							deviceId,
+							tracks,
+							Number(action.options.positionMs) || 0,
+							action.options.fadeIn as boolean,
+							Number(action.options.startVolume),
+							Number(action.options.targetVolume),
+							Number(action.options.fadeDurationMs),
+						).catch((err) => instance.log('warn', `PlaySpecificTracks failed: ${err}`))
 					})
 				}
 			},
 		},
 		[ActionId.Pause]: {
 			name: 'Pause Playback',
-			options: [],
-			callback: async () => {
+			options: [
+				{
+					type: 'checkbox',
+					label: 'Fade Out Volume',
+					id: 'fadeOut',
+					default: false,
+				},
+				{
+					type: 'number',
+					label: 'Fade Duration (milliseconds)',
+					id: 'fadeDurationMs',
+					default: 5000,
+					min: 500,
+					max: 300000,
+					step: 500,
+					isVisible: (options) => options.fadeOut === true,
+				},
+			],
+			callback: async (action) => {
 				await executeActionIfHasDeviceId('pause', async (instance, deviceId) => {
-					await ChangePlayState(instance, deviceId, 'pause')
+					ChangePlayState(
+						instance,
+						deviceId,
+						'pause',
+						action.options.fadeOut as boolean,
+						false,
+						0,
+						0,
+						Number(action.options.fadeDurationMs),
+					).catch((err) => instance.log('warn', `Pause failed: ${err}`))
 				})
 			},
 		},
@@ -192,12 +413,75 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 				})
 			},
 		},
+		[ActionId.FadeVolume]: {
+			name: 'Fade Volume',
+			options: [
+				{
+					type: 'number',
+					label: 'Target Volume',
+					id: 'targetVolume',
+					default: 50,
+					min: 0,
+					max: 100,
+					step: 1,
+				},
+				{
+					type: 'number',
+					label: 'Fade Duration (milliseconds)',
+					id: 'fadeDurationMs',
+					default: 5000,
+					min: 500,
+					max: 300000,
+					step: 500,
+				},
+			],
+			callback: async (action) => {
+				await executeActionIfHasDeviceId('fade volume', async (instance, deviceId) => {
+					FadeVolume(
+						instance,
+						deviceId,
+						Number(action.options.targetVolume),
+						Number(action.options.fadeDurationMs),
+					).catch((err) => instance.log('warn', `FadeVolume failed: ${err}`))
+				})
+			},
+		},
+		[ActionId.SeekPositionBack]: {
+			name: 'Go Backwards X Milliseconds In Currently Playing Track',
+			options: [{ type: 'textinput', label: 'Position (milliseconds)', id: 'position', default: '' }],
+			callback: async (action) => {
+				const positionMs = Number(action.options.position)
+				if (!isNaN(positionMs)) {
+					await executeActionIfHasDeviceId('seek', async (instance, deviceId) => {
+						const currentPositionVariable = instance.getVariableValue('songProgressSeconds')
+						const currentPosition = !isNaN(Number(currentPositionVariable)) ? Number(currentPositionVariable) * 1000 : 0
+						const seekToPosition = Math.max(0, currentPosition - positionMs)
+						await SeekPosition(instance, deviceId, seekToPosition)
+					})
+				}
+			},
+		},
+		[ActionId.SeekPositionForward]: {
+			name: 'Go Forward X Milliseconds In Currently Playing Track',
+			options: [{ type: 'textinput', label: 'Position (milliseconds)', id: 'position', default: '' }],
+			callback: async (action) => {
+				const positionMs = Number(action.options.position)
+				if (!isNaN(positionMs)) {
+					await executeActionIfHasDeviceId('seek', async (instance, deviceId) => {
+						const currentPositionVariable = instance.getVariableValue('songProgressSeconds')
+						const currentPosition = !isNaN(Number(currentPositionVariable)) ? Number(currentPositionVariable) * 1000 : 0
+						const seekToPosition = Math.max(0, currentPosition + positionMs)
+						await SeekPosition(instance, deviceId, seekToPosition)
+					})
+				}
+			},
+		},
 		[ActionId.SeekPosition]: {
 			name: 'Seek To Position In Currently Playing Track',
 			options: [{ type: 'textinput', label: 'Position (milliseconds)', id: 'position', default: '' }],
 			callback: async (action) => {
-				if (typeof action.options.position === 'number') {
-					const positionMs = action.options.position
+				const positionMs = Number(action.options.position)
+				if (!isNaN(positionMs)) {
 					await executeActionIfHasDeviceId('seek', async (instance, deviceId) => {
 						await SeekPosition(instance, deviceId, positionMs)
 					})
@@ -338,6 +622,47 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						await QueueItem(instance, deviceId, context_uri)
 					})
 				}
+			},
+		},
+		[ActionId.Mute]: {
+			name: 'Mute Volume',
+			description: 'Mute the volume, saving the current volume to restore on unmute',
+			options: [],
+			callback: async () => {
+				await executeActionIfHasDeviceId('mute', async (instance, deviceId) => {
+					const currentVolume = Number(instance.getVariableValue('volume'))
+					instance.premuteVolume = !isNaN(currentVolume) ? currentVolume : instance.premuteVolume
+					instance.setVariableValues({ premuteVolume: instance.premuteVolume })
+					await ChangeVolume(instance, deviceId, true, 0)
+				})
+			},
+		},
+		[ActionId.Unmute]: {
+			name: 'Unmute Volume',
+			description: 'Unmute the volume, restoring the volume to the value before mute',
+			options: [],
+			callback: async () => {
+				await executeActionIfHasDeviceId('unmute', async (instance, deviceId) => {
+					const premuteVolume = instance.premuteVolume
+					await ChangeVolume(instance, deviceId, true, premuteVolume)
+				})
+			},
+		},
+		[ActionId.MuteToggle]: {
+			name: 'Toggle Mute Volume',
+			description: 'Toggle mute/unmute the volume, saving/restoring the current volume',
+			options: [],
+			callback: async () => {
+				await executeActionIfHasDeviceId('mute toggle', async (instance, deviceId) => {
+					const currentVolume = Number(instance.getVariableValue('volume'))
+					if (!isNaN(currentVolume) && currentVolume > 0) {
+						instance.premuteVolume = currentVolume
+						instance.setVariableValues({ premuteVolume: instance.premuteVolume })
+						await ChangeVolume(instance, deviceId, true, 0)
+					} else {
+						await ChangeVolume(instance, deviceId, true, instance.premuteVolume)
+					}
+				})
 			},
 		},
 	}

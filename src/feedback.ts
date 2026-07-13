@@ -11,7 +11,7 @@ export enum FeedbackId {
 }
 
 export function GetFeedbacksList(
-	instance: SpotifyInstanceBase,
+	_instance: SpotifyInstanceBase,
 	getState: () => SpotifyState,
 ): CompanionFeedbackDefinitions {
 	const feedbacks: { [id in FeedbackId]: CompanionFeedbackDefinition | undefined } = {
@@ -111,10 +111,10 @@ export function GetFeedbacksList(
 			},
 			callback: (feedback): boolean => {
 				const currentContext = getState().playbackState?.currentContext
-				instance.log(
-					'debug',
-					`Feedback check for current context. Feedback value: ${feedback.options.id}, Current context: ${JSON.stringify(currentContext)}`,
-				)
+				// instance.log(
+				// 	'debug',
+				// 	`Feedback check for current context. Feedback value: ${feedback.options.id}, Current context: ${JSON.stringify(currentContext)}`,
+				// )
 				return currentContext == feedback.options.id
 			},
 		},

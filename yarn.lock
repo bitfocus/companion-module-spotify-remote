@@ -2463,6 +2463,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"set-interval-async@npm:^3.0.3":
+  version: 3.0.3
+  resolution: "set-interval-async@npm:3.0.3"
+  checksum: 10c0/7547bb5265648951f3f799391d970f39be16bae2b462ad54b58e96a6a3eb9dda1f183a3b9a4bfdc0a62637b026b494fae74cda075db1c5762b58d0c9172e6d4c
+  languageName: node
+  linkType: hard
+
 "shallow-clone@npm:^3.0.0":
   version: 3.0.1
   resolution: "shallow-clone@npm:3.0.1"
@@ -2547,6 +2554,7 @@ __metadata:
     p-queue: "npm:^8.1.0"
     prettier: "npm:^3.7.4"
     rimraf: "npm:^6.1.2"
+    set-interval-async: "npm:^3.0.3"
     type-fest: "npm:^4.39.1"
     typescript: "npm:~5.9.3"
     typescript-eslint: "npm:^8.51.0"

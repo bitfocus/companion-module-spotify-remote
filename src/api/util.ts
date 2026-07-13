@@ -12,7 +12,7 @@ export async function doGetRequest<T>(reqOptions: RequestOptionsBase, pathname: 
 				Authorization: `Bearer ${reqOptions.accessToken}`,
 				'Content-Type': 'application/json',
 			},
-			responseType: 'json',
+			// responseType: 'json',
 			timeout: {
 				request: DefaultTimeout,
 			},
@@ -36,7 +36,7 @@ export async function doPutRequest(
 				Authorization: `Bearer ${reqOptions.accessToken}`,
 				'Content-Type': 'application/json',
 			},
-			responseType: 'json',
+			// responseType: 'json',
 			timeout: {
 				request: DefaultTimeout,
 			},
@@ -58,7 +58,7 @@ export async function doPostRequest(
 				Authorization: `Bearer ${reqOptions.accessToken}`,
 				'Content-Type': 'application/json',
 			},
-			responseType: 'json',
+			// responseType: 'json',
 			timeout: {
 				request: DefaultTimeout,
 			},

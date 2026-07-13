@@ -1,6 +1,6 @@
 {
 	"name": "spotify-remote",
-	"version": "2.6.0",
+	"version": "2.7.0",
 	"main": "dist/main.js",
 	"type": "module",
 	"scripts": {
@@ -15,11 +15,10 @@
 		"lint-fix": "run lint --fix"
 	},
 	"license": "MIT",
-		"repository": {
+	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/bitfocus/companion-module-spotify-remote.git"
 	},
-
 	"prettier": "@companion-module/tools/.prettierrc.json",
 	"lint-staged": {
 		"*.{css,json,md,scss}": [
@@ -37,6 +36,7 @@
 		"@companion-module/base": "~1.14.1",
 		"got": "^14.4.7",
 		"p-queue": "^8.1.0",
+		"set-interval-async": "^3.0.3",
 		"type-fest": "^4.39.1"
 	},
 	"devDependencies": {
