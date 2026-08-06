@@ -275,7 +275,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 				await fcn(this, this.config.deviceId || null)
 					.catch((e) => {
 						// console.log(e)
-						this.log('error', `Execute action failed: ${JSON.stringify(e.toString())}`)
+						this.log('error', `Execute action failed: ${formatApiError(e)}`)
 					})
 					.then(() => {
 						// Do a poll asap, to catch the changes

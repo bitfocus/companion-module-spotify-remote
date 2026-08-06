@@ -15,6 +15,7 @@ import {
 	TransferPlayback,
 } from './helpers.js'
 import { getMyDevices } from './api/device.js'
+import { formatApiError } from './api/util.js'
 
 export enum ActionId {
 	PlayPause = 'play/pause',
@@ -120,7 +121,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						Number(action.options.startVolume),
 						Number(action.options.targetVolume),
 						Number(action.options.fadeDurationMs),
-					).catch((err) => instance.log('warn', `Play Toggle failed: ${err}`))
+					).catch((err) => instance.log('warn', `Play Toggle failed: ${formatApiError(err)}`))
 				})
 			},
 		},
@@ -175,7 +176,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						Number(action.options.startVolume),
 						Number(action.options.targetVolume),
 						Number(action.options.fadeDurationMs),
-					).catch((err) => instance.log('warn', `Play failed: ${err}`))
+					).catch((err) => instance.log('warn', `Play failed: ${formatApiError(err)}`))
 				})
 			},
 		},
@@ -268,7 +269,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 							Number(action.options.startVolume),
 							Number(action.options.targetVolume),
 							Number(action.options.fadeDurationMs),
-						).catch((err) => instance.log('warn', `PlaySpecificList failed: ${err}`))
+						).catch((err) => instance.log('warn', `PlaySpecificList failed: ${formatApiError(err)}`))
 					})
 				}
 			},
@@ -346,7 +347,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 							Number(action.options.startVolume),
 							Number(action.options.targetVolume),
 							Number(action.options.fadeDurationMs),
-						).catch((err) => instance.log('warn', `PlaySpecificTracks failed: ${err}`))
+						).catch((err) => instance.log('warn', `PlaySpecificTracks failed: ${formatApiError(err)}`))
 					})
 				}
 			},
@@ -382,7 +383,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						0,
 						0,
 						Number(action.options.fadeDurationMs),
-					).catch((err) => instance.log('warn', `Pause failed: ${err}`))
+					).catch((err) => instance.log('warn', `Pause failed: ${formatApiError(err)}`))
 				})
 			},
 		},
@@ -442,7 +443,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						deviceId,
 						Number(action.options.targetVolume),
 						Number(action.options.fadeDurationMs),
-					).catch((err) => instance.log('warn', `FadeVolume failed: ${err}`))
+					).catch((err) => instance.log('warn', `FadeVolume failed: ${formatApiError(err)}`))
 				})
 			},
 		},
