@@ -16,7 +16,7 @@ import { SpotifyInstanceBase } from './types.js'
 import { UpgradeScripts } from './upgrades.js'
 import { authorizationCodeGrant, GenerateAuthorizeUrl, refreshAccessToken } from './api/auth.js'
 import { getMyCurrentPlaybackState } from './api/playback.js'
-import { RequestOptionsBase } from './api/util.js'
+import { formatApiError, isInvalidGrantError, RequestOptionsBase } from './api/util.js'
 
 const AUTH_SCOPES = [
 	'user-read-playback-state',
@@ -56,44 +56,84 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 	public async checkIfApiErrorShouldRetry(err: any): Promise<boolean> {
 		// Error Code 401 represents out of date token
 		if ('statusCode' in err && err.statusCode == '401') {
-			if (!this.config.clientId || !this.config.clientSecret || !this.config.refreshToken) {
-				this.log('debug', `Missing properties required to refresh access token`)
-
-				return false
-			}
-			try {
-				const data = await refreshAccessToken(this.config.clientId, this.config.clientSecret, this.config.refreshToken)
-				if (data.body?.access_token) {
-					// Save the new token
-					this.accessToken = data.body.access_token
-
-					this.updateStatus(InstanceStatus.Ok)
-					return true
-				} else {
-					this.log('debug', `No access token in refresh response`)
-
-					// Clear the stale token
-					this.accessToken = null
-
-					this.updateStatus(InstanceStatus.Connecting)
-					return false
-				}
-			} catch (e: any) {
-				this.log('debug', `Failed to refresh access token: ${e.toString()}`)
-
-				// Clear the stale token
-				this.accessToken = null
-
-				this.updateStatus(InstanceStatus.Connecting)
-				return false
-			}
+			return this.performTokenRefresh()
 		} else {
-			const errStr = 'error' in err ? err.error.toString() : err.toString()
-			this.log('debug', `Something went wrong with an API Call: ${errStr}`)
-			// TODO - log better
+			this.log('debug', `Something went wrong with an API Call: ${formatApiError(err)}`)
 
 			return false
 		}
+	}
+
+	/**
+	 * Exchange the stored refresh token for a fresh access token.
+	 * Persists a rotated refresh token if Spotify returns one, and if the refresh token has
+	 * expired or been revoked (Spotify now enforces a 6 month lifetime) it is discarded and the
+	 * user is prompted to re-authorize rather than the module retrying forever.
+	 * @returns true if a new access token was obtained
+	 */
+	private async performTokenRefresh(): Promise<boolean> {
+		if (!this.config.clientId || !this.config.clientSecret || !this.config.refreshToken) {
+			this.log('debug', `Missing properties required to refresh access token`)
+			return false
+		}
+
+		try {
+			const data = await refreshAccessToken(this.config.clientId, this.config.clientSecret, this.config.refreshToken)
+			if (data.body?.access_token) {
+				// Save the new token
+				this.accessToken = data.body.access_token
+
+				// Spotify may rotate the refresh token - persist the new one so the next refresh works
+				if (data.body.refresh_token && data.body.refresh_token !== this.config.refreshToken) {
+					this.config.refreshToken = data.body.refresh_token
+					this.saveConfig(this.config)
+				}
+
+				this.updateStatus(InstanceStatus.Ok)
+				return true
+			}
+
+			this.log('debug', `No access token in refresh response`)
+			this.accessToken = null
+			this.updateStatus(InstanceStatus.Connecting)
+			return false
+		} catch (err) {
+			// Clear the stale token
+			this.accessToken = null
+
+			if (isInvalidGrantError(err)) {
+				// The refresh token is expired or revoked - it can never succeed again.
+				// Discard it and send the user back through the authorization flow.
+				this.log('warn', `Refresh token is no longer valid, re-authorization required: ${formatApiError(err)}`)
+				delete this.config.refreshToken
+				this.regenerateAuthUrl('Refresh token expired - please re-authorize using the Auth URL')
+			} else {
+				// Likely a transient/network error - keep the refresh token and try again later
+				this.log('warn', `Failed to refresh access token: ${formatApiError(err)}`)
+				this.updateStatus(InstanceStatus.Connecting)
+			}
+			return false
+		}
+	}
+
+	/**
+	 * (Re)generate the authorization URL from the current config and surface it to the user,
+	 * putting the module into a BadConfig state that explains what to do next.
+	 */
+	private regenerateAuthUrl(statusMessage: string): void {
+		if (this.config.clientId && this.config.redirectUri) {
+			this.config.authURL = GenerateAuthorizeUrl(
+				this.config.clientId,
+				this.config.redirectUri,
+				AUTH_SCOPES,
+				'',
+			).toString()
+			this.saveConfig(this.config)
+
+			this.log('info', `Please visit the following URL to authorize the module: ${this.config.authURL}`)
+		}
+
+		this.updateStatus(InstanceStatus.BadConfig, statusMessage)
 	}
 
 	public getRequestOptionsBase(): RequestOptionsBase | null {
@@ -157,55 +197,39 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 				.then((data) => {
 					if (data.body?.access_token) {
 						this.accessToken = data.body.access_token
+
+						if (data.body.refresh_token) {
+							this.config.refreshToken = data.body.refresh_token
+						} else {
+							delete this.config.refreshToken
+						}
+						this.saveConfig(this.config)
+
+						this.updateStatus(InstanceStatus.Ok)
 					} else {
 						this.accessToken = null
-					}
-					if (data.body?.refresh_token) {
-						this.config.refreshToken = data.body.refresh_token
-					} else {
-						delete this.config.refreshToken
-					}
-					this.saveConfig(this.config)
+						this.log('warn', `Authorization response did not contain an access token`)
 
-					this.updateStatus(InstanceStatus.Ok)
+						// The approval code has been consumed, offer a fresh one to retry with
+						this.regenerateAuthUrl('Authorization failed - please try again using the Auth URL')
+					}
 				})
 				.catch((err) => {
-					console.log(err)
-					this.log('debug', `Failed to get access token: ${err?.message ?? err?.toString() ?? err}`)
+					const msg = formatApiError(err)
+					this.log('warn', `Failed to get access token: ${msg}`)
+
+					// The approval code is single-use and now consumed, so generate a fresh auth URL
+					// to let the user retry instead of leaving them stuck with a silently cleared field.
+					this.regenerateAuthUrl(`Authorization failed: ${msg}`)
 				})
 		} else if (this.config.refreshToken) {
 			this.updateStatus(InstanceStatus.Connecting)
 
 			// Perform refresh
-			refreshAccessToken(this.config.clientId, this.config.clientSecret, this.config.refreshToken)
-				.then((data) => {
-					if (data.body?.access_token) {
-						// Save the access token so that it's used in future calls
-						this.accessToken = data.body.access_token
-
-						this.updateStatus(InstanceStatus.Ok)
-					} else {
-						this.accessToken = null
-
-						this.updateStatus(InstanceStatus.Connecting)
-					}
-				})
-				.catch((err) => {
-					this.log('warn', `Failed to refresh access token: ${err.toString()}`)
-				})
+			void this.performTokenRefresh()
 		} else {
-			this.updateStatus(InstanceStatus.BadConfig)
-
 			// Needs manual intervention
-			this.config.authURL = GenerateAuthorizeUrl(
-				this.config.clientId,
-				this.config.redirectUri,
-				AUTH_SCOPES,
-				'',
-			).toString()
-			this.saveConfig(this.config)
-
-			this.log('info', `Please visit the following URL to authorize the module: ${this.config.authURL}`)
+			this.regenerateAuthUrl('Please authorize the module using the Auth URL')
 		}
 	}
 
