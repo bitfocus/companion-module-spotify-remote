@@ -13,6 +13,7 @@ import {
 	transferMyPlayback,
 } from './api/playback.js'
 import { SpotifyInstanceBase } from './types.js'
+import { formatApiError } from './api/util.js'
 
 // Limit the number of retries that we do
 const MAX_ATTEMPTS = 5
@@ -428,7 +429,7 @@ export async function FadeVolume(
 				await setVolume(reqOptions, nextVolume, { deviceId })
 				instance.setVariableValues({ volume: nextVolume })
 			} catch (err) {
-				instance.log('warn', `FadeVolume step ${step} failed: ${err}`)
+				instance.log('warn', `FadeVolume step ${step} failed: ${formatApiError(err)}`)
 			}
 
 			if (isLast || signal.aborted) {
