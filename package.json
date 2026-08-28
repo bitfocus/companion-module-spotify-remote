@@ -40,7 +40,7 @@
 		"type-fest": "^4.39.1"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.6.1",
+		"@companion-module/tools": "^2.8.0",
 		"@types/node": "^22.19.3",
 		"@types/spotify-api": "^0.0.25",
 		"eslint": "^9.39.2",
