@@ -1,9 +1,9 @@
+import type { SearchParameters } from 'got'
 import {
 	Response,
 	doGetRequest,
 	RequestOptionsBase,
 	DeviceOptions,
-	QueryParameters,
 	doPostRequest,
 	doPutRequest,
 	BodyParameters,
@@ -14,7 +14,7 @@ export async function addItemToQueue(
 	context_uri: string,
 	options?: DeviceOptions,
 ): Promise<Response<void>> {
-	const params: QueryParameters = {
+	const params: SearchParameters = {
 		uri: context_uri,
 	}
 	if (options && 'deviceId' in options) params.device_id = options.deviceId
@@ -29,14 +29,14 @@ export async function getMyCurrentPlaybackState(
 }
 
 export async function skipToNext(reqOptions: RequestOptionsBase, options?: DeviceOptions): Promise<Response<void>> {
-	const params: QueryParameters = {}
+	const params: SearchParameters = {}
 	if (options && 'deviceId' in options) params.device_id = options.deviceId
 
 	return doPostRequest(reqOptions, '/v1/me/player/next', params)
 }
 
 export async function skipToPrevious(reqOptions: RequestOptionsBase, options?: DeviceOptions): Promise<Response<void>> {
-	const params: QueryParameters = {}
+	const params: SearchParameters = {}
 	if (options && 'deviceId' in options) params.device_id = options.deviceId
 
 	return doPostRequest(reqOptions, '/v1/me/player/previous', params)
@@ -59,7 +59,7 @@ export async function transferMyPlayback(
 }
 
 export async function pause(reqOptions: RequestOptionsBase, options?: DeviceOptions): Promise<Response<void>> {
-	const params: QueryParameters = {}
+	const params: SearchParameters = {}
 	if (options && 'deviceId' in options) params.device_id = options.deviceId
 
 	return doPutRequest(reqOptions, '/v1/me/player/pause', params, {})
@@ -72,7 +72,7 @@ export interface PlayOptions extends DeviceOptions {
 	position_ms?: number | undefined
 }
 export async function play(reqOptions: RequestOptionsBase, options?: PlayOptions): Promise<Response<void>> {
-	const params: QueryParameters = {}
+	const params: SearchParameters = {}
 	const body: BodyParameters = {}
 
 	if (options) {
@@ -92,7 +92,7 @@ export async function setRepeat(
 	state: 'off' | 'track' | 'context',
 	options?: DeviceOptions,
 ): Promise<Response<void>> {
-	const params: QueryParameters = {
+	const params: SearchParameters = {
 		state,
 	}
 	if (options && 'deviceId' in options) params.device_id = options.deviceId
@@ -105,7 +105,7 @@ export async function setShuffle(
 	state: boolean,
 	options?: DeviceOptions,
 ): Promise<Response<void>> {
-	const params: QueryParameters = {
+	const params: SearchParameters = {
 		state,
 	}
 	if (options && 'deviceId' in options) params.device_id = options.deviceId
@@ -118,7 +118,7 @@ export async function seek(
 	positionMs: number,
 	options?: DeviceOptions,
 ): Promise<Response<void>> {
-	const params: QueryParameters = {
+	const params: SearchParameters = {
 		position_ms: positionMs,
 	}
 	if (options && 'deviceId' in options) params.device_id = options.deviceId

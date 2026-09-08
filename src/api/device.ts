@@ -1,4 +1,5 @@
-import { Response, doGetRequest, RequestOptionsBase, doPutRequest, QueryParameters, DeviceOptions } from './util.js'
+import { Response, doGetRequest, RequestOptionsBase, doPutRequest, DeviceOptions } from './util.js'
+import type { SearchParameters } from 'got'
 
 export async function getMyDevices(
 	reqOptions: RequestOptionsBase,
@@ -11,7 +12,7 @@ export async function setVolume(
 	volumePercent: number,
 	options?: DeviceOptions,
 ): Promise<Response<void>> {
-	const params: QueryParameters = {
+	const params: SearchParameters = {
 		volume_percent: volumePercent,
 	}
 	if (options?.deviceId) params.device_id = options.deviceId

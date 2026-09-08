@@ -1,4 +1,4 @@
-import got, { CancelableRequest, HTTPError } from 'got'
+import got, { HTTPError, type RequestPromise, type SearchParameters } from 'got'
 import { IncomingHttpHeaders } from 'http'
 
 export const SpotifyBaseUrl = 'https://api.spotify.com'
@@ -21,13 +21,12 @@ export async function doGetRequest<T>(reqOptions: RequestOptionsBase, pathname: 
 	)
 }
 
-export type QueryParameters = Record<string, string | number | boolean | null | undefined>
 export type BodyParameters = Record<string, any>
 
 export async function doPutRequest(
 	reqOptions: RequestOptionsBase,
 	pathname: string,
-	queryParams: QueryParameters,
+	queryParams: SearchParameters,
 	body: BodyParameters,
 ): Promise<Response<void>> {
 	return doRequestNoResponse(
@@ -50,7 +49,7 @@ export async function doPutRequest(
 export async function doPostRequest(
 	reqOptions: RequestOptionsBase,
 	pathname: string,
-	queryParams: QueryParameters,
+	queryParams: SearchParameters,
 ): Promise<Response<void>> {
 	return doRequestNoResponse(
 		got.post<void>(SpotifyBaseUrl + pathname, {
@@ -68,7 +67,7 @@ export async function doPostRequest(
 	)
 }
 
-export async function doRequestNoResponse(req: CancelableRequest<Response<void>>): Promise<Response<void>> {
+export async function doRequestNoResponse(req: RequestPromise<Response<void>>): Promise<Response<void>> {
 	try {
 		// console.log('json', await req.json(), (await req.buffer()).length)
 		const res = await req
@@ -83,7 +82,7 @@ export async function doRequestNoResponse(req: CancelableRequest<Response<void>>
 	}
 }
 
-export async function doRequest<T>(req: CancelableRequest<Response<T>>): Promise<Response<T>> {
+export async function doRequest<T>(req: RequestPromise<Response<T>>): Promise<Response<T>> {
 	try {
 		// console.log('json', await req.json(), (await req.buffer()).length)
 		const res = await req
