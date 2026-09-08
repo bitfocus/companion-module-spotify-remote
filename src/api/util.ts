@@ -5,6 +5,22 @@ export const SpotifyBaseUrl = 'https://api.spotify.com'
 export const SpotifyAuthUrl = 'https://accounts.spotify.com'
 export const DefaultTimeout = 10000
 
+export function formatApiError(error: unknown): string {
+	if (error instanceof Error) return error.message
+
+	if (typeof error === 'object' && error !== null) {
+		const apiError = error as Partial<ApiError>
+		const status = typeof apiError.statusCode === 'number' ? `HTTP ${apiError.statusCode}` : undefined
+		const detail = apiError.error instanceof Error ? apiError.error.message : String(apiError.error ?? '')
+
+		if (status && detail) return `${status}: ${detail}`
+		if (status) return status
+		if (detail) return detail
+	}
+
+	return String(error)
+}
+
 export async function doGetRequest<T>(reqOptions: RequestOptionsBase, pathname: string): Promise<Response<T>> {
 	return doRequest<T>(
 		got.get<T>(SpotifyBaseUrl + pathname, {

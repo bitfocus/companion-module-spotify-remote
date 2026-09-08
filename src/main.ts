@@ -16,7 +16,7 @@ import { SpotifyInstanceBase } from './types.js'
 import { UpgradeScripts } from './upgrades.js'
 import { authorizationCodeGrant, GenerateAuthorizeUrl, refreshAccessToken } from './api/auth.js'
 import { getMyCurrentPlaybackState } from './api/playback.js'
-import { RequestOptionsBase } from './api/util.js'
+import { formatApiError, RequestOptionsBase } from './api/util.js'
 
 const AUTH_SCOPES = [
 	'user-read-playback-state',
@@ -250,8 +250,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 			if (this.canPollOrPost()) {
 				await fcn(this, this.config.deviceId || null)
 					.catch((e) => {
-						// console.log(e)
-						this.log('error', `Execute action failed: ${JSON.stringify(e.toString())}`)
+						this.log('error', `Execute action failed: ${formatApiError(e)}`)
 					})
 					.then(() => {
 						// Do a poll asap, to catch the changes
