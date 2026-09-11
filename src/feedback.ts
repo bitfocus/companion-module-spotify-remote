@@ -111,11 +111,21 @@ export function GetFeedbacksList(
 			},
 			callback: (feedback): boolean => {
 				const currentContext = getState().playbackState?.currentContext
-				// instance.log(
+				// _instance.log(
 				// 	'debug',
 				// 	`Feedback check for current context. Feedback value: ${feedback.options.id}, Current context: ${JSON.stringify(currentContext)}`,
 				// )
-				return currentContext == feedback.options.id
+
+				const feedbackContext = feedback.options.id as string
+				const feedbackContext_uri = feedbackContext.startsWith('spotify:')
+					? feedbackContext.substring(feedbackContext.lastIndexOf(':') + 1)
+					: feedbackContext
+
+				// _instance.log(
+				// 	'debug',
+				// 	`Feedback check for current context. Feedback value: ${feedbackContext_uri}, Current context: ${JSON.stringify(currentContext)}`,
+				// )
+				return currentContext == feedbackContext_uri
 			},
 		},
 	}
