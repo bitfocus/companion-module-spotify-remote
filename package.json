@@ -1,6 +1,6 @@
 {
 	"name": "spotify-remote",
-	"version": "2.7.1",
+	"version": "2.8.0",
 	"main": "dist/main.js",
 	"type": "module",
 	"scripts": {
