@@ -413,9 +413,11 @@ export async function FadeVolume(
 
 	await new Promise<void>((resolve) => {
 		const timer = setIntervalAsync(async () => {
+			// Don't await clearIntervalAsync from inside the handler: it waits for the
+			// running handler (this one) to finish, which would deadlock.
 			if (signal.aborted) {
-				await clearIntervalAsync(timer)
 				resolve()
+				void clearIntervalAsync(timer)
 				return
 			}
 
@@ -433,8 +435,8 @@ export async function FadeVolume(
 			}
 
 			if (isLast || signal.aborted) {
-				await clearIntervalAsync(timer)
 				resolve()
+				void clearIntervalAsync(timer)
 			}
 		}, intervalMs)
 	})
