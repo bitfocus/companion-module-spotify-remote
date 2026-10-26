@@ -12,6 +12,7 @@ import {
 	skipToPrevious,
 	transferMyPlayback,
 } from './api/playback.js'
+import { checkLibraryContains, removeFromLibrary, saveToLibrary } from './api/library.js'
 import { SpotifyInstanceBase } from './types.js'
 import { formatApiError } from './api/util.js'
 
@@ -246,6 +247,43 @@ export async function ChangeShuffleState(
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return ChangeShuffleState(instance, deviceId, target, attempt + 1)
+		} else {
+			throw err
+		}
+	}
+}
+
+export async function ChangeCurrentTrackSavedState(
+	instance: SpotifyInstanceBase,
+	target: boolean | 'toggle',
+	attempt = 0,
+): Promise<void> {
+	const reqOptions = instance.getRequestOptionsBase()
+	if (!reqOptions) return
+
+	try {
+		const data = await getMyCurrentPlaybackState(reqOptions)
+		if (!data.body?.item || data.body.currently_playing_type !== 'track') {
+			instance.log('warn', 'Cannot change saved state, no track is currently playing')
+			return
+		}
+		const uris = [data.body.item.uri]
+
+		let save = target === true
+		if (target === 'toggle') {
+			const contains = await checkLibraryContains(reqOptions, uris)
+			save = !contains.body?.[0]
+		}
+
+		if (save) {
+			await saveToLibrary(reqOptions, uris)
+		} else {
+			await removeFromLibrary(reqOptions, uris)
+		}
+	} catch (err) {
+		const retry = await instance.checkIfApiErrorShouldRetry(err)
+		if (retry && attempt <= MAX_ATTEMPTS) {
+			return ChangeCurrentTrackSavedState(instance, target, attempt + 1)
 		} else {
 			throw err
 		}

@@ -20,6 +20,7 @@ export interface SpotifyTrackInfo {
 	artistName: string | null
 	albumName: string | null
 	albumImageUrl: string | null
+	isInLibrary: boolean | null
 }
 
 export interface SpotifyDeviceInfo {

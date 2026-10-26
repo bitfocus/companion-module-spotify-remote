@@ -1,6 +1,7 @@
 import { CompanionActionDefinitions, CompanionActionDefinition } from '@companion-module/base'
 import { SpotifyInstanceBase } from './types.js'
 import {
+	ChangeCurrentTrackSavedState,
 	ChangePlayState,
 	ChangeRepeatState,
 	ChangeShuffleState,
@@ -42,6 +43,9 @@ export enum ActionId {
 	Mute = 'mute',
 	Unmute = 'unmute',
 	MuteToggle = 'muteToggle',
+	SaveCurrentTrack = 'saveCurrentTrack',
+	UnsaveCurrentTrack = 'unsaveCurrentTrack',
+	ToggleSaveCurrentTrack = 'toggleSaveCurrentTrack',
 }
 
 export type DoAction = (instance: SpotifyInstanceBase, deviceId: string | null) => Promise<void>
@@ -623,6 +627,30 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						await QueueItem(instance, deviceId, context_uri)
 					})
 				}
+			},
+		},
+		[ActionId.SaveCurrentTrack]: {
+			name: 'Add Current Track to Library',
+			description: "Add the currently playing track to the user's library (liked/favorites)",
+			options: [],
+			callback: async () => {
+				await executeAction(async (instance) => ChangeCurrentTrackSavedState(instance, true))
+			},
+		},
+		[ActionId.UnsaveCurrentTrack]: {
+			name: 'Remove Current Track from Library',
+			description: "Remove the currently playing track from the user's library (liked/favorites)",
+			options: [],
+			callback: async () => {
+				await executeAction(async (instance) => ChangeCurrentTrackSavedState(instance, false))
+			},
+		},
+		[ActionId.ToggleSaveCurrentTrack]: {
+			name: 'Toggle Current Track Save State in Library',
+			description: "Add or remove the currently playing track in the user's library (liked/favorites)",
+			options: [],
+			callback: async () => {
+				await executeAction(async (instance) => ChangeCurrentTrackSavedState(instance, 'toggle'))
 			},
 		},
 		[ActionId.Mute]: {

@@ -46,6 +46,26 @@ export async function doPutRequest(
 	)
 }
 
+export async function doDeleteRequest(
+	reqOptions: RequestOptionsBase,
+	pathname: string,
+	queryParams: SearchParameters,
+): Promise<Response<void>> {
+	return doRequestNoResponse(
+		got.delete<void>(SpotifyBaseUrl + pathname, {
+			headers: {
+				Authorization: `Bearer ${reqOptions.accessToken}`,
+				'Content-Type': 'application/json',
+			},
+			timeout: {
+				request: DefaultTimeout,
+			},
+			hooks: {},
+			searchParams: queryParams,
+		}),
+	)
+}
+
 export async function doPostRequest(
 	reqOptions: RequestOptionsBase,
 	pathname: string,

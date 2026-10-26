@@ -16,6 +16,7 @@ import { SpotifyInstanceBase } from './types.js'
 import { UpgradeScripts } from './upgrades.js'
 import { authorizationCodeGrant, GenerateAuthorizeUrl, refreshAccessToken } from './api/auth.js'
 import { getMyCurrentPlaybackState } from './api/playback.js'
+import { checkLibraryContains } from './api/library.js'
 import { formatApiError, isInvalidGrantError, RequestOptionsBase } from './api/util.js'
 
 const AUTH_SCOPES = [
@@ -27,6 +28,7 @@ const AUTH_SCOPES = [
 	'playlist-read-collaborative',
 	'playlist-read-private',
 	'user-library-read',
+	'user-library-modify',
 	'user-top-read',
 	'user-read-playback-position',
 ]
@@ -297,6 +299,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 			{ variableId: 'songName', name: 'Current Song Name' },
 			{ variableId: 'albumName', name: 'Current Album Name' },
 			{ variableId: 'artistName', name: 'Current Artist Name' },
+			{ variableId: 'isSongInLibrary', name: 'Is Current Song in user\'s Library (Liked/Favorites)' },
 			{ variableId: 'isPlaying', name: 'Is Playback Active' },
 			{ variableId: 'isPlayingIcon', name: 'Playback Icon' },
 			{ variableId: 'isShuffle', name: 'Is Shuffle Enabled' },
@@ -384,6 +387,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 						artistName: null,
 						albumName: null,
 						albumImageUrl: null,
+						isInLibrary: null,
 					}
 
 					if ('artists' in data.body.item) {
@@ -396,6 +400,16 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 						newState.trackInfo.albumName = rawAlbum.name
 
 						if (rawAlbum.images.length > 0) newState.trackInfo.albumImageUrl = rawAlbum.images[0].url
+					}
+
+					// isInLibrary stays null when it cannot be determined (not a track, or the check failed)
+					if (data.body.currently_playing_type === 'track') {
+						try {
+							const res = await checkLibraryContains(reqOptions, [data.body.item.uri])
+							newState.trackInfo.isInLibrary = res.body?.[0] ?? null
+						} catch (e) {
+							this.log('debug', `Failed to check if the song is in the library: ${formatApiError(e)}`)
+						}
 					}
 				}
 
@@ -466,6 +480,9 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 		}
 		if (forceUpdate || oldState?.trackInfo?.albumImageUrl !== newState?.trackInfo?.albumImageUrl) {
 			variableUpdates['currentAlbumArt'] = newState?.trackInfo?.albumImageUrl ?? ''
+		}
+		if (forceUpdate || oldState?.trackInfo?.isInLibrary !== newState?.trackInfo?.isInLibrary) {
+			variableUpdates['isSongInLibrary'] = newState?.trackInfo?.isInLibrary ?? ''
 		}
 
 		// Look for track progress/duration changes
