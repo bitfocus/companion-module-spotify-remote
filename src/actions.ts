@@ -1,4 +1,10 @@
-import { CompanionActionDefinitions, CompanionActionDefinition } from '@companion-module/base'
+import {
+	CompanionActionContext,
+	CompanionActionDefinitions,
+	CompanionActionDefinition,
+	CompanionInputFieldTextInput,
+	CompanionOptionValues,
+} from '@companion-module/base'
 import { SpotifyInstanceBase } from './types.js'
 import {
 	ChangePlayState,
@@ -46,6 +52,29 @@ export enum ActionId {
 
 export type DoAction = (instance: SpotifyInstanceBase, deviceId: string | null) => Promise<void>
 
+// Number fields can't take variables in module API 1.x, so volumes are text inputs parsed at runtime
+function volumeInput(
+	id: string,
+	label: string,
+	defaultValue: number,
+	isVisible?: CompanionInputFieldTextInput['isVisible'],
+): CompanionInputFieldTextInput {
+	return {
+		type: 'textinput',
+		label,
+		id,
+		default: String(defaultValue),
+		tooltip: 'A number from 0 to 100, or a variable such as $(custom:volume)',
+		useVariables: true,
+		isVisible,
+	}
+}
+
+async function parseVolume(context: CompanionActionContext, value: CompanionOptionValues[string]): Promise<number> {
+	const text = (await context.parseVariablesInString(String(value ?? ''))).trim()
+	return text === '' ? NaN : Number(text)
+}
+
 export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>): CompanionActionDefinitions {
 	const executeActionIfHasDeviceId = async (
 		actionName: string,
@@ -79,26 +108,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					id: 'fadeIn',
 					default: false,
 				},
-				{
-					type: 'number',
-					label: 'Start Volume for Fade In',
-					id: 'startVolume',
-					default: 0,
-					min: 0,
-					max: 100,
-					step: 1,
-					isVisible: (options) => options.fadeIn === true,
-				},
-				{
-					type: 'number',
-					label: 'Target Volume for Fade In',
-					id: 'targetVolume',
-					default: 85,
-					min: 0,
-					max: 100,
-					step: 1,
-					isVisible: (options) => options.fadeIn === true,
-				},
+				volumeInput('startVolume', 'Start Volume for Fade In', 0, (options) => options.fadeIn === true),
+				volumeInput('targetVolume', 'Target Volume for Fade In', 85, (options) => options.fadeIn === true),
 				{
 					type: 'number',
 					label: 'Fade Duration (milliseconds)',
@@ -110,7 +121,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					isVisible: (options) => options.fadeIn === true || options.fadeOut === true,
 				},
 			],
-			callback: async (action) => {
+			callback: async (action, context) => {
 				await executeActionIfHasDeviceId('play/pause', async (instance, deviceId) => {
 					ChangePlayState(
 						instance,
@@ -118,8 +129,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						'toggle',
 						action.options.fadeOut as boolean,
 						action.options.fadeIn as boolean,
-						Number(action.options.startVolume),
-						Number(action.options.targetVolume),
+						await parseVolume(context, action.options.startVolume),
+						await parseVolume(context, action.options.targetVolume),
 						Number(action.options.fadeDurationMs),
 					).catch((err) => instance.log('warn', `Play Toggle failed: ${formatApiError(err)}`))
 				})
@@ -134,26 +145,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					id: 'fadeIn',
 					default: false,
 				},
-				{
-					type: 'number',
-					label: 'Start Volume',
-					id: 'startVolume',
-					default: 0,
-					min: 0,
-					max: 100,
-					step: 1,
-					isVisible: (options) => options.fadeIn === true,
-				},
-				{
-					type: 'number',
-					label: 'Target Volume',
-					id: 'targetVolume',
-					default: 85,
-					min: 0,
-					max: 100,
-					step: 1,
-					isVisible: (options) => options.fadeIn === true,
-				},
+				volumeInput('startVolume', 'Start Volume', 0, (options) => options.fadeIn === true),
+				volumeInput('targetVolume', 'Target Volume', 85, (options) => options.fadeIn === true),
 				{
 					type: 'number',
 					label: 'Fade Duration (milliseconds)',
@@ -165,7 +158,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					isVisible: (options) => options.fadeIn === true,
 				},
 			],
-			callback: async (action) => {
+			callback: async (action, context) => {
 				await executeActionIfHasDeviceId('play', async (instance, deviceId) => {
 					ChangePlayState(
 						instance,
@@ -173,8 +166,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 						'play',
 						false,
 						action.options.fadeIn as boolean,
-						Number(action.options.startVolume),
-						Number(action.options.targetVolume),
+						await parseVolume(context, action.options.startVolume),
+						await parseVolume(context, action.options.targetVolume),
 						Number(action.options.fadeDurationMs),
 					).catch((err) => instance.log('warn', `Play failed: ${formatApiError(err)}`))
 				})
@@ -219,26 +212,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					id: 'fadeIn',
 					default: false,
 				},
-				{
-					type: 'number',
-					label: 'Start Volume',
-					id: 'startVolume',
-					default: 0,
-					min: 0,
-					max: 100,
-					step: 1,
-					isVisible: (options) => options.fadeIn === true,
-				},
-				{
-					type: 'number',
-					label: 'Target Volume',
-					id: 'targetVolume',
-					default: 85,
-					min: 0,
-					max: 100,
-					step: 1,
-					isVisible: (options) => options.fadeIn === true,
-				},
+				volumeInput('startVolume', 'Start Volume', 0, (options) => options.fadeIn === true),
+				volumeInput('targetVolume', 'Target Volume', 85, (options) => options.fadeIn === true),
 				{
 					type: 'number',
 					label: 'Fade Duration (milliseconds)',
@@ -266,8 +241,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 							context_uri,
 							behavior,
 							action.options.fadeIn as boolean,
-							Number(action.options.startVolume),
-							Number(action.options.targetVolume),
+							await parseVolume(context, action.options.startVolume),
+							await parseVolume(context, action.options.targetVolume),
 							Number(action.options.fadeDurationMs),
 						).catch((err) => instance.log('warn', `PlaySpecificList failed: ${formatApiError(err)}`))
 					})
@@ -299,26 +274,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					id: 'fadeIn',
 					default: false,
 				},
-				{
-					type: 'number',
-					label: 'Start Volume',
-					id: 'startVolume',
-					default: 0,
-					min: 0,
-					max: 100,
-					step: 1,
-					isVisible: (options) => options.fadeIn === true,
-				},
-				{
-					type: 'number',
-					label: 'Target Volume',
-					id: 'targetVolume',
-					default: 85,
-					min: 0,
-					max: 100,
-					step: 1,
-					isVisible: (options) => options.fadeIn === true,
-				},
+				volumeInput('startVolume', 'Start Volume', 0, (options) => options.fadeIn === true),
+				volumeInput('targetVolume', 'Target Volume', 85, (options) => options.fadeIn === true),
 				{
 					type: 'number',
 					label: 'Fade Duration (milliseconds)',
@@ -330,7 +287,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					isVisible: (options) => options.fadeIn === true,
 				},
 			],
-			callback: async (action) => {
+			callback: async (action, context) => {
 				if (typeof action.options.tracks === 'string') {
 					const tracks = action.options.tracks.split(',').map((track) => {
 						const value = track.trim()
@@ -344,8 +301,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 							tracks,
 							Number(action.options.positionMs) || 0,
 							action.options.fadeIn as boolean,
-							Number(action.options.startVolume),
-							Number(action.options.targetVolume),
+							await parseVolume(context, action.options.startVolume),
+							await parseVolume(context, action.options.targetVolume),
 							Number(action.options.fadeDurationMs),
 						).catch((err) => instance.log('warn', `PlaySpecificTracks failed: ${formatApiError(err)}`))
 					})
@@ -389,43 +346,35 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 		},
 		[ActionId.VolumeUp]: {
 			name: 'Volume Up',
-			options: [{ type: 'number', label: 'Volume', id: 'volumeUpAmount', default: 5, min: 0, max: 100, step: 1 }],
-			callback: async (action) => {
+			options: [volumeInput('volumeUpAmount', 'Volume', 5)],
+			callback: async (action, context) => {
 				await executeActionIfHasDeviceId('volume up', async (instance, deviceId) => {
-					await ChangeVolume(instance, deviceId, false, Number(action.options.volumeUpAmount))
+					await ChangeVolume(instance, deviceId, false, await parseVolume(context, action.options.volumeUpAmount))
 				})
 			},
 		},
 		[ActionId.VolumeDown]: {
 			name: 'Volume Down',
-			options: [{ type: 'number', label: 'Volume', id: 'volumeDownAmount', default: 5, min: 0, max: 100, step: 1 }],
-			callback: async (action) => {
+			options: [volumeInput('volumeDownAmount', 'Volume', 5)],
+			callback: async (action, context) => {
 				await executeActionIfHasDeviceId('volume down', async (instance, deviceId) => {
-					await ChangeVolume(instance, deviceId, false, -Number(action.options.volumeDownAmount))
+					await ChangeVolume(instance, deviceId, false, -(await parseVolume(context, action.options.volumeDownAmount)))
 				})
 			},
 		},
 		[ActionId.VolumeSpecific]: {
 			name: 'Set Volume to Specific Value',
-			options: [{ type: 'number', label: 'Volume', id: 'value', default: 50, min: 0, max: 100, step: 1 }],
-			callback: async (action) => {
+			options: [volumeInput('value', 'Volume', 50)],
+			callback: async (action, context) => {
 				await executeActionIfHasDeviceId('volume', async (instance, deviceId) => {
-					await ChangeVolume(instance, deviceId, true, Number(action.options.value))
+					await ChangeVolume(instance, deviceId, true, await parseVolume(context, action.options.value))
 				})
 			},
 		},
 		[ActionId.FadeVolume]: {
 			name: 'Fade Volume',
 			options: [
-				{
-					type: 'number',
-					label: 'Target Volume',
-					id: 'targetVolume',
-					default: 50,
-					min: 0,
-					max: 100,
-					step: 1,
-				},
+				volumeInput('targetVolume', 'Target Volume', 50),
 				{
 					type: 'number',
 					label: 'Fade Duration (milliseconds)',
@@ -436,12 +385,12 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 					step: 500,
 				},
 			],
-			callback: async (action) => {
+			callback: async (action, context) => {
 				await executeActionIfHasDeviceId('fade volume', async (instance, deviceId) => {
 					FadeVolume(
 						instance,
 						deviceId,
-						Number(action.options.targetVolume),
+						await parseVolume(context, action.options.targetVolume),
 						Number(action.options.fadeDurationMs),
 					).catch((err) => instance.log('warn', `FadeVolume failed: ${formatApiError(err)}`))
 				})
