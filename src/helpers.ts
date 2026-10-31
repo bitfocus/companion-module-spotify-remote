@@ -49,7 +49,7 @@ export async function ChangeVolume(
 	if (!reqOptions) return
 
 	if (isNaN(volumeOrDelta)) {
-		instance.log('debug', `Invalid volume change: ${volumeOrDelta} isAbsolute=${absolute}`)
+		instance.log('warn', `Invalid volume change: ${volumeOrDelta} isAbsolute=${absolute}`)
 		return
 	}
 
@@ -398,6 +398,11 @@ export async function FadeVolume(
 ): Promise<void> {
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
+
+	if (isNaN(targetVolume)) {
+		instance.log('warn', `Invalid fade target volume: ${targetVolume}`)
+		return
+	}
 
 	const clampedTarget = Math.max(0, Math.min(100, Math.round(targetVolume)))
 	const clampedDuration = Math.max(FADE_MIN_INTERVAL_MS, fadeDurationMs)
