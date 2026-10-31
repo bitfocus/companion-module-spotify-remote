@@ -158,6 +158,8 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 
 		this.setupOrRefreshAuthentication(true)
 
+		this.restartPollTimer()
+
 		this.initActions()
 	}
 
@@ -243,13 +245,21 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 
 		this.setupOrRefreshAuthentication(true)
 
-		if (!this.pollTimer && this.config.pollInterval) {
-			this.pollTimer = setInterval(() => this.queuePoll(), this.config.pollInterval * 1000) // Check every 3 seconds. This leaves a bit of headroom before we hit the daily api limit
-		}
+		this.restartPollTimer()
 
 		this.initActions()
 		this.initFeedbacks()
 		this.initVariables()
+	}
+
+	private restartPollTimer(): void {
+		if (this.pollTimer) {
+			clearInterval(this.pollTimer)
+			delete this.pollTimer
+		}
+
+		// ensureRequiredConfigIsDefined has already clamped pollInterval to a finite, bounded number
+		this.pollTimer = setInterval(() => this.queuePoll(), this.config.pollInterval * 1000)
 	}
 
 	async destroy(): Promise<void> {
