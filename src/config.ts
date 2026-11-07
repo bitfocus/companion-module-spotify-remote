@@ -69,7 +69,7 @@ export function GetConfigFields(activeDeviceId: string | null | undefined): Some
 			width: 6,
 			label: '',
 			value:
-				'Required for the isSongInLibrary variable and the library actions (their definitions are always available). The variable is looked up once each time the song changes, which counts toward a separate and small Spotify request quota for development mode apps. The library actions need the user-library-modify permission: after enabling this, clear the Refresh Token and use the new Auth URL to re-authorize.',
+				'Required for the isSongInLibrary variable and the library actions. The variable is looked up once each time the song changes, which counts toward a separate and small Spotify request quota for development mode apps. The library actions need the user-library-modify permission: after enabling this, clear the Refresh Token and use the new Auth URL to re-authorize.',
 		},
 	]
 }
