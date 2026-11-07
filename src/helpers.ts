@@ -12,7 +12,7 @@ import {
 	skipToPrevious,
 	transferMyPlayback,
 } from './api/playback.js'
-import { checkLibraryContains, removeFromLibrary, saveToLibrary } from './api/library.js'
+import { removeFromLibrary, saveToLibrary } from './api/library.js'
 import { SpotifyInstanceBase } from './types.js'
 import { formatApiError } from './api/util.js'
 
@@ -261,30 +261,42 @@ export async function ChangeCurrentTrackSavedState(
 	const reqOptions = instance.getRequestOptionsBase()
 	if (!reqOptions) return
 
+	if (instance.isLibraryBlocked()) {
+		instance.log('warn', 'Skipping library change, Spotify is refusing library requests (quota exceeded)')
+		return
+	}
+
 	try {
 		const data = await getMyCurrentPlaybackState(reqOptions)
 		if (!data.body?.item || data.body.currently_playing_type !== 'track') {
 			instance.log('warn', 'Cannot change saved state, no track is currently playing')
 			return
 		}
-		const uris = [data.body.item.uri]
+		const uri = data.body.item.uri
 
 		let save = target === true
 		if (target === 'toggle') {
-			const contains = await checkLibraryContains(reqOptions, uris)
-			save = !contains.body?.[0]
+			// Toggle what the user sees, even if it is out of sync with Spotify
+			const inLibrary = await instance.lookupTrackInLibrary(uri)
+			if (typeof inLibrary !== 'boolean') {
+				instance.log('warn', 'Cannot toggle saved state, whether the track is in the library is unknown')
+				return
+			}
+			save = !inLibrary
 		}
 
 		if (save) {
-			await saveToLibrary(reqOptions, uris)
+			await saveToLibrary(reqOptions, [uri])
 		} else {
-			await removeFromLibrary(reqOptions, uris)
+			await removeFromLibrary(reqOptions, [uri])
 		}
+		instance.setTrackInLibrary(uri, save)
 	} catch (err) {
 		const retry = await instance.checkIfApiErrorShouldRetry(err)
 		if (retry && attempt <= MAX_ATTEMPTS) {
 			return ChangeCurrentTrackSavedState(instance, target, attempt + 1)
 		} else {
+			instance.handleLibraryError(err)
 			throw err
 		}
 	}

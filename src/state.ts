@@ -15,12 +15,13 @@ export interface SpotifyPlaybackState {
 }
 
 export interface SpotifyTrackInfo {
+	uri: string
 	durationMs: number
 	name: string
 	artistName: string | null
 	albumName: string | null
 	albumImageUrl: string | null
-	isInLibrary: boolean | null
+	isInLibrary: boolean | 'unknown' | null
 }
 
 export interface SpotifyDeviceInfo {

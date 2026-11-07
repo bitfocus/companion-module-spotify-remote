@@ -11,6 +11,7 @@ export interface DeviceConfig {
 	deviceId?: string
 	authURL?: string
 	pollInterval: number
+	enableLibrary?: boolean
 }
 
 export function GetConfigFields(activeDeviceId: string | null | undefined): SomeCompanionConfigField[] {
@@ -54,6 +55,21 @@ export function GetConfigFields(activeDeviceId: string | null | undefined): Some
 			label: '',
 			value:
 				'This is how often the module will poll the Spotify API for updates. Default is 3 seconds. This may need to be increased if reaching the api rate limit.',
+		},
+		{
+			type: 'checkbox',
+			id: 'enableLibrary',
+			width: 6,
+			label: 'Enable library (liked/favorites)',
+			default: false,
+		},
+		{
+			type: 'static-text',
+			id: '_library_info_',
+			width: 6,
+			label: '',
+			value:
+				'Required for the isSongInLibrary variable and the library actions (their definitions are always available). The variable is looked up once each time the song changes, which counts toward a separate and small Spotify request quota for development mode apps. The library actions need the user-library-modify permission: after enabling this, clear the Refresh Token and use the new Auth URL to re-authorize.',
 		},
 	]
 }

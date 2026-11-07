@@ -631,7 +631,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 		},
 		[ActionId.SaveCurrentTrack]: {
 			name: 'Add Current Track to Library',
-			description: "Add the currently playing track to the user's library (liked/favorites)",
+			description:
+				"Add the currently playing track to the user's library (liked/favorites). Requires 'Enable library' in the module config",
 			options: [],
 			callback: async () => {
 				await executeAction(async (instance) => ChangeCurrentTrackSavedState(instance, true))
@@ -639,7 +640,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 		},
 		[ActionId.UnsaveCurrentTrack]: {
 			name: 'Remove Current Track from Library',
-			description: "Remove the currently playing track from the user's library (liked/favorites)",
+			description:
+				"Remove the currently playing track from the user's library (liked/favorites). Requires 'Enable library' in the module config",
 			options: [],
 			callback: async () => {
 				await executeAction(async (instance) => ChangeCurrentTrackSavedState(instance, false))
@@ -647,7 +649,8 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 		},
 		[ActionId.ToggleSaveCurrentTrack]: {
 			name: 'Toggle Current Track Save State in Library',
-			description: "Add or remove the currently playing track in the user's library (liked/favorites)",
+			description:
+				"Add or remove the currently playing track in the user's library (liked/favorites). Requires 'Enable library' in the module config",
 			options: [],
 			callback: async () => {
 				await executeAction(async (instance) => ChangeCurrentTrackSavedState(instance, 'toggle'))

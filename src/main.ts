@@ -55,6 +55,56 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 
 	premuteVolume: number = 50
 
+	/** Library requests are paused until this time, after Spotify reported the quota as exceeded */
+	private libraryBlockedUntil = 0
+
+	public isLibraryBlocked(): boolean {
+		return Date.now() < this.libraryBlockedUntil
+	}
+
+	public handleLibraryError(err: unknown): void {
+		if (typeof err === 'object' && err && 'statusCode' in err && err.statusCode === 429) {
+			const retryAfter = Number((err as { headers?: Record<string, unknown> }).headers?.['retry-after'])
+			const wasBlocked = this.isLibraryBlocked()
+			// Without a usable Retry-After, fall back to a minute
+			this.libraryBlockedUntil = Date.now() + (retryAfter > 0 ? retryAfter : 60) * 1000
+			if (!wasBlocked) {
+				this.log('warn', `Spotify is refusing library requests, pausing them: ${formatApiError(err)}`)
+			}
+		} else {
+			this.log('debug', `Library request failed: ${formatApiError(err)}`)
+		}
+	}
+
+	/** Record the library state of the current track after it has been changed by an action */
+	public setTrackInLibrary(uri: string, inLibrary: boolean): void {
+		const trackInfo = this.state.playbackState?.trackInfo
+		if (trackInfo?.uri !== uri) return
+		trackInfo.isInLibrary = inLibrary
+		this.setVariableValues({ isSongInLibrary: inLibrary })
+	}
+
+	/**
+	 * Get whether a track is in the library: what is currently shown if it is the current track, otherwise looked up from Spotify.
+	 * Returns null if it should be retried later
+	 */
+	public async lookupTrackInLibrary(uri: string): Promise<boolean | 'unknown' | null> {
+		const trackInfo = this.state.playbackState?.trackInfo
+		if (trackInfo?.uri === uri && trackInfo.isInLibrary !== null) return trackInfo.isInLibrary
+
+		const reqOptions = this.getRequestOptionsBase()
+		if (!reqOptions || this.isLibraryBlocked()) return null
+
+		try {
+			const res = await checkLibraryContains(reqOptions, [uri])
+			return res.body?.[0] ?? 'unknown'
+		} catch (e) {
+			this.handleLibraryError(e)
+			// A quota error is retried once it is over, anything else isn't retried for this track
+			return this.isLibraryBlocked() ? null : 'unknown'
+		}
+	}
+
 	public async checkIfApiErrorShouldRetry(err: any): Promise<boolean> {
 		// Error Code 401 represents out of date token
 		if ('statusCode' in err && err.statusCode == '401') {
@@ -299,7 +349,10 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 			{ variableId: 'songName', name: 'Current Song Name' },
 			{ variableId: 'albumName', name: 'Current Album Name' },
 			{ variableId: 'artistName', name: 'Current Artist Name' },
-			{ variableId: 'isSongInLibrary', name: 'Is Current Song in user\'s Library (Liked/Favorites)' },
+			{
+				variableId: 'isSongInLibrary',
+				name: "Is Current Song in user's Library (Liked/Favorites). Requires 'Enable library' in the module config",
+			},
 			{ variableId: 'isPlaying', name: 'Is Playback Active' },
 			{ variableId: 'isPlayingIcon', name: 'Playback Icon' },
 			{ variableId: 'isShuffle', name: 'Is Shuffle Enabled' },
@@ -382,6 +435,7 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 
 				if (data.body.item) {
 					newState.trackInfo = {
+						uri: data.body.item.uri,
 						durationMs: data.body.item.duration_ms,
 						name: data.body.item.name,
 						artistName: null,
@@ -402,14 +456,9 @@ class SpotifyInstance extends InstanceBase<DeviceConfig> implements SpotifyInsta
 						if (rawAlbum.images.length > 0) newState.trackInfo.albumImageUrl = rawAlbum.images[0].url
 					}
 
-					// isInLibrary stays null when it cannot be determined (not a track, or the check failed)
-					if (data.body.currently_playing_type === 'track') {
-						try {
-							const res = await checkLibraryContains(reqOptions, [data.body.item.uri])
-							newState.trackInfo.isInLibrary = res.body?.[0] ?? null
-						} catch (e) {
-							this.log('debug', `Failed to check if the song is in the library: ${formatApiError(e)}`)
-						}
+					// isInLibrary stays null when not looked up (not a track, library disabled, or Spotify's quota is exceeded)
+					if (this.config.enableLibrary && data.body.currently_playing_type === 'track') {
+						newState.trackInfo.isInLibrary = await this.lookupTrackInLibrary(data.body.item.uri)
 					}
 				}
 
