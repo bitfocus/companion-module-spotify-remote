@@ -394,6 +394,8 @@ export async function PlaySpecificTracks(
 		await play(reqOptions, {
 			deviceId: deviceId,
 			uris: uris,
+			// Without an offset, Spotify's desktop app (1.3.9) resumes a loaded track that has no context and queues these instead
+			offset: { position: 0 },
 			position_ms: positionMs,
 		})
 
