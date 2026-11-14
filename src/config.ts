@@ -2,6 +2,10 @@ import type { SomeCompanionConfigField } from '@companion-module/base'
 
 export const DEFAULT_CONFIG: DeviceConfig = { pollInterval: 3 }
 
+export const MIN_POLL_INTERVAL = 1
+// Must stay well below setInterval's 2^31-1 ms limit, beyond which Node fires every 1 ms
+export const MAX_POLL_INTERVAL = 3600
+
 export interface DeviceConfig {
 	clientId?: string
 	clientSecret?: string
@@ -46,7 +50,15 @@ export function GetConfigFields(activeDeviceId: string | null | undefined): Some
 				: 'No device was active when this panel was opened',
 		},
 		{ type: 'textinput', id: 'authURL', width: 12, label: 'Auth URL' },
-		{ type: 'textinput', id: 'pollInterval', width: 6, label: 'API Poll Interval (seconds)' },
+		{
+			type: 'number',
+			id: 'pollInterval',
+			width: 6,
+			label: 'API Poll Interval (seconds)',
+			default: DEFAULT_CONFIG.pollInterval,
+			min: MIN_POLL_INTERVAL,
+			max: MAX_POLL_INTERVAL,
+		},
 		{
 			type: 'static-text',
 			id: '_poll_info_',
@@ -61,8 +73,15 @@ export function GetConfigFields(activeDeviceId: string | null | undefined): Some
 export function ensureRequiredConfigIsDefined(config: DeviceConfig): boolean {
 	let changed = false
 
-	if (!config.pollInterval || config.pollInterval < 0) {
-		config.pollInterval = DEFAULT_CONFIG.pollInterval
+	// Older configs stored this from a textinput, so it may be any string
+	const rawPollInterval: unknown = config.pollInterval
+	const parsedPollInterval = Number(rawPollInterval)
+	const pollInterval =
+		Number.isFinite(parsedPollInterval) && parsedPollInterval > 0
+			? Math.min(Math.max(parsedPollInterval, MIN_POLL_INTERVAL), MAX_POLL_INTERVAL)
+			: DEFAULT_CONFIG.pollInterval
+	if (pollInterval !== rawPollInterval) {
+		config.pollInterval = pollInterval
 		changed = true
 	}
 
