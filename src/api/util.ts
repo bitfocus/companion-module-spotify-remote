@@ -5,7 +5,11 @@ export const SpotifyBaseUrl = 'https://api.spotify.com'
 export const SpotifyAuthUrl = 'https://accounts.spotify.com'
 export const DefaultTimeout = 10000
 
-export async function doGetRequest<T>(reqOptions: RequestOptionsBase, pathname: string): Promise<Response<T>> {
+export async function doGetRequest<T>(
+	reqOptions: RequestOptionsBase,
+	pathname: string,
+	queryParams?: SearchParameters,
+): Promise<Response<T>> {
 	return doRequest<T>(
 		got.get<T>(SpotifyBaseUrl + pathname, {
 			headers: {
@@ -17,6 +21,7 @@ export async function doGetRequest<T>(reqOptions: RequestOptionsBase, pathname: 
 				request: DefaultTimeout,
 			},
 			hooks: {},
+			searchParams: queryParams,
 		}),
 	)
 }

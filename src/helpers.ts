@@ -12,6 +12,8 @@ import {
 	skipToPrevious,
 	transferMyPlayback,
 } from './api/playback.js'
+import { getAlbumTracks } from './api/album.js'
+import { getPlaylistItems } from './api/playlist.js'
 import { SpotifyInstanceBase } from './types.js'
 import { formatApiError } from './api/util.js'
 
@@ -273,6 +275,37 @@ export async function SeekPosition(
 	}
 }
 
+/**
+ * Pick a random starting position in an album or playlist. Spotify only accepts a start position for those two, and
+ * only returns the items of playlists the user owns, so anything it can't count gets no offset.
+ */
+async function GetRandomStartOffset(
+	instance: SpotifyInstanceBase,
+	context_uri: string,
+): Promise<{ position: number } | undefined> {
+	const reqOptions = instance.getRequestOptionsBase()
+	const match = /^spotify:(album|playlist):([A-Za-z0-9]+)$/.exec(context_uri)
+	if (!reqOptions || !match) return undefined
+
+	const [, type, id] = match
+	try {
+		const tracks =
+			type === 'album'
+				? await getAlbumTracks(reqOptions, id, { limit: 1 })
+				: await getPlaylistItems(reqOptions, id, { limit: 1 })
+		const total = tracks.body?.total
+		if (!total) return undefined
+
+		return { position: Math.floor(Math.random() * total) }
+	} catch (err) {
+		instance.log(
+			'debug',
+			`Unable to count the tracks in ${context_uri}, leaving the start to Spotify: ${formatApiError(err)}`,
+		)
+		return undefined
+	}
+}
+
 export async function PlaySpecificList(
 	instance: SpotifyInstanceBase,
 	deviceId: string,
@@ -288,34 +321,33 @@ export async function PlaySpecificList(
 	if (!reqOptions) return
 
 	try {
-		if (behavior !== 'force') {
-			const data = await getMyCurrentPlaybackState(reqOptions)
-			if (data.body?.context?.uri === context_uri) {
-				if (behavior == 'return' || (behavior == 'resume' && data.body.is_playing)) {
-					instance.log('warn', `Already playing that ${context_uri}`)
-				} else if (behavior == 'resume') {
-					if (fadeIn) {
-						await ChangeVolume(instance, deviceId, true, Number(startVolume))
-						await GetCurrentVolume(instance, deviceId)
-					}
-					await play(reqOptions, { deviceId })
-					if (fadeIn) {
-						await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
-					}
+		const data = await getMyCurrentPlaybackState(reqOptions)
+		if (behavior !== 'force' && data.body?.context?.uri === context_uri) {
+			if (behavior == 'return' || (behavior == 'resume' && data.body.is_playing)) {
+				instance.log('warn', `Already playing that ${context_uri}`)
+			} else if (behavior == 'resume') {
+				if (fadeIn) {
+					await ChangeVolume(instance, deviceId, true, Number(startVolume))
+					await GetCurrentVolume(instance, deviceId)
 				}
-
-				return
+				await play(reqOptions, { deviceId })
+				if (fadeIn) {
+					await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
+				}
 			}
+
+			return
 		}
+
+		// Spotify used to start a list at a random track when shuffle was on. It now replays the shuffle order it
+		// already generated for that list, so every start began on the same song.
+		const offset = data.body?.shuffle_state ? await GetRandomStartOffset(instance, context_uri) : undefined
 
 		if (fadeIn) {
 			await ChangeVolume(instance, deviceId, true, Number(startVolume))
 			await GetCurrentVolume(instance, deviceId)
 		}
-		await play(reqOptions, {
-			deviceId,
-			context_uri,
-		})
+		await play(reqOptions, offset ? { deviceId, context_uri, offset } : { deviceId, context_uri })
 		if (fadeIn) {
 			await FadeVolume(instance, deviceId, Number(targetVolume), Number(fadeDurationMs))
 		}

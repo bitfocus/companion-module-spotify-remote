@@ -175,6 +175,7 @@ export function GetActionsList(executeAction: (fcn: DoAction) => Promise<void>):
 		},
 		[ActionId.PlaySpecificList]: {
 			name: 'Start Specific Album / Artist / Playlist',
+			description: 'When shuffle is on, an album or one of your own playlists starts at a random track.',
 			options: [
 				{
 					id: 'type',
